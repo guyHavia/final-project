@@ -68,18 +68,44 @@ session stores only `{ id, role }`, snapshotted at login (D4 + ADR 0001).
   - `401` otherwise. A user deactivated or deleted mid-session is treated as
     anonymous on their next request (the session is destroyed).
 
-### Users (admin)  — _P5, pending_
+### Users (admin)  — _contract by P1 (P1-05); implementation by P5 (P5-04)_
 
-Every `/api/users*` admin route is **editor-only** (`requireRole('editor')`) —
-including `GET /api/users/:id`. Only `PATCH /api/users/me` is self-service (any
-authenticated user). Full request/response shapes: `docs/tickets/P1.md` P1-05.
+There is **no public signup** (D3) — editors create every account here. Every
+`/api/users*` route below is **editor-only** (`requireRole('editor')`),
+including `GET /api/users/:id`. The single exception is `PATCH /api/users/me`,
+which is self-service for any authenticated user.
 
-- `POST /api/users` — editor-only
-- `GET /api/users?q=&cursor=&limit=` — editor-only (search by `username`)
-- `GET /api/users/:id` — editor-only
-- `PATCH /api/users/:id` — editor-only (`role` / `displayName` / `active` / `password`)
-- `DELETE /api/users/:id` — editor-only (soft-delete per D2)
-- `PATCH /api/users/me` — self (own `displayName`, or `password` with `currentPassword`)
+`userView` (the safe shape, never includes `passwordHash`):
+`{ id, username, role, displayName, active, createdAt, updatedAt }`.
+
+P5 reuses `createUser({ username, password, role, displayName })` from
+`models/user.model.js` for hashing — do not call bcrypt directly.
+
+- **`POST /api/users`** — editor-only. Body `{ username, password, role, displayName }`.
+  - `201 → { data: userView }`.
+  - `400` on a missing field or `role` outside `reporter|editor`.
+  - `409 { error: { code: "duplicate" } }` if `username` is taken (case-insensitive).
+- **`GET /api/users?q=&cursor=&limit=`** — editor-only. `q` is a case-insensitive
+  substring match on `username`; `limit` defaults to 20 (cap 100); `cursor` is
+  the last `id` from the previous page (keyset).
+  - `200 → { data: { users: [userView], nextCursor: <id|null> } }`.
+- **`GET /api/users/:id`** — editor-only.
+  - `200 → { data: userView }`; `404` if not found.
+- **`PATCH /api/users/:id`** — editor-only. Any subset of
+  `{ role, displayName, active, password }`. `password` is re-hashed via the
+  model's `setPassword`. Setting `active: false` is the soft-delete path (D2)
+  and should also revoke that user's sessions (see P1-08 `destroySessionsForUser`).
+  - `200 → { data: userView }`; `400` on an unknown field or bad `role`; `404` if not found.
+- **`DELETE /api/users/:id`** — editor-only. **Soft-delete** (D2): sets
+  `active: false`; the byline and `author` refs stay valid. A hard delete is
+  allowed **only** when the user has zero articles (coordinate with P2's
+  article count).
+  - `200 → { data: { ok: true, deleted: "soft" | "hard" } }`; `404` if not found.
+- **`PATCH /api/users/me`** — any authenticated user, own account only. Body is
+  `{ displayName }` and/or `{ password, currentPassword }`; changing the
+  password requires a correct `currentPassword`.
+  - `200 → { data: userView }`; `400` if `currentPassword` is missing when
+    `password` is given; `401` if `currentPassword` is wrong.
 
 ### Articles  — _P2, pending_
 

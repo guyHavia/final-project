@@ -53,7 +53,7 @@ S-01 skeleton ✅
 | P1-02 | Session store (connect-mongo) + Restart test | P1 | M | P1-01 | done |
 | P1-03 | Auth endpoints: login / logout / me | P1 | M | P1-01, P1-02 | done |
 | P1-04 | RBAC middleware: requireAuth / requireRole | P1 | S | P1-03 | done |
-| P1-05 | `createUser()` helper + user-admin CRUD contract | P1 | S | P1-01 | todo |
+| P1-05 | `createUser()` helper + user-admin CRUD contract | P1 | S | P1-01 | done |
 | P1-06 | View-Stats model + `recordView()` | P1 | M | S-01 | todo |
 | P1-07 | Impact Analytics endpoint + `stats.service.js` | P1 | L | P1-06, P2-02 | todo |
 | P1-08 | Login lockout + destroy-user-sessions | P1 | S | P1-03 | todo (stretch) |
@@ -79,7 +79,7 @@ S-01 skeleton ✅
 | P4-06 | Responsive newsroom CSS pass | P4 | M | P4-03, P4-04 | todo |
 | P5-02 | Wire session.js + rateLimit.js seams in app.js | P5 | S | P1-02, P3-02 | todo |
 | P5-03 | Weather service (15-min server cache, /api/weather) | P5 | M | S-01 | todo |
-| P5-04 | User-admin CRUD (`/api/users*`) | P5 | M | P1-04, P1-05, P2-01 | todo |
+| P5-04 | User-admin CRUD (`/api/users*`) | P5 | M | P1-04, P1-05, P2-01 | todo (contract ready — API-CONTRACT.md "Users (admin)") |
 | P5-05 | Seed script (500 articles + users + comments + stats) | P5 | L | P1-01, P2-01, P3-01, P1-06 | todo |
 | P5-06 | Deployment: private repo, Zip, README finalize | P5 | S | most | todo |
 
