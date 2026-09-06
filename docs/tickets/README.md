@@ -1,6 +1,11 @@
 # Backlog
 
-One ticket = one branch = one PR. Detail per owner in `P{N}.md` next to this file.
+One ticket = one branch = one PR. This table is the index. Per-owner detail:
+`P1.md` next to this file for P1; GitHub issues for the rest —
+[#4](https://github.com/guyHavia/final-project/issues/4) (P2),
+[#5](https://github.com/guyHavia/final-project/issues/5) (P3),
+[#6](https://github.com/guyHavia/final-project/issues/6) (P4),
+[#3](https://github.com/guyHavia/final-project/issues/3) (P5).
 
 ## Status legend
 
@@ -20,9 +25,9 @@ S-01 skeleton ✅
       │
       ├─ P1-01 user model ─ P1-02 sessions ─ **P1-03 auth endpoints** ─ **P1-04 RBAC**
       │                                                                    │
-      │                                             ┌──────────────────────┤
-      │                                             ▼                      ▼
-      ├─ P2-01 article model ─ P2-02 state machine ─ P2-03 authoring     P4-01 login
+      │                                             ┌──────────────────────┘
+      │                                             ▼
+      ├─ P2-01 article model ─ P2-02 state machine ─ P2-03 authoring     P4-01 login (needs P1-03)
       │        │                       │             P2-04 editor flow ─ P2-05 shadowing
       │        │                       ▼                    │
       │        ├─ P2-06 public queries ─ P2-07 SSR hook     ▼
@@ -33,7 +38,7 @@ S-01 skeleton ✅
       │
       ├─ P1-06 view-stats model ─ P1-07 stats endpoint ─ P4-05 analytics screen
       │
-      └─ P5-03 weather · P5-04 user-admin CRUD (needs P1-04,P1-05) · P5-05 seed (needs all models)
+      └─ P5-03 weather · P5-04 user-admin CRUD (needs P1-04, P1-05, P2-01) · P5-05 seed (needs all models)
          P5-06 deployment (last)
 ```
 
@@ -74,7 +79,7 @@ S-01 skeleton ✅
 | P4-06 | Responsive newsroom CSS pass | P4 | M | P4-03, P4-04 | todo |
 | P5-02 | Wire session.js + rateLimit.js seams in app.js | P5 | S | P1-02, P3-02 | todo |
 | P5-03 | Weather service (15-min server cache, /api/weather) | P5 | M | S-01 | todo |
-| P5-04 | User-admin CRUD (`/api/users*`) | P5 | M | P1-04, P1-05 | todo |
+| P5-04 | User-admin CRUD (`/api/users*`) | P5 | M | P1-04, P1-05, P2-01 | todo |
 | P5-05 | Seed script (500 articles + users + comments + stats) | P5 | L | P1-01, P2-01, P3-01, P1-06 | todo |
 | P5-06 | Deployment: private repo, Zip, README finalize | P5 | S | most | todo |
 

@@ -34,6 +34,13 @@ newsroom UI (P4), auth (P1).
 - **D8** — rate limiting is an **in-memory `Map`**, keyed by a random `deviceId`
   cookie you set on first visit (never IP). A server restart resetting the counter is acceptable.
 - **D5** — article URL is `/article/:slug`.
+- **D9** — the feed's "viewed / not-viewed" filter is **client-local only**:
+  store seen article ids in `localStorage` on the device and filter in the
+  browser. No server `seen` param, no round-trip, no schema change (guests are
+  never stored).
+- **D10** — your `GET /article/:slug` page controller calls `recordView(articleId)`
+  exactly once, server-side, per full page render. Do **not** call it on the Ajax
+  comments load or from any JSON endpoint.
 
 ## Interfaces
 
@@ -51,8 +58,10 @@ newsroom UI (P4), auth (P1).
 
 ## Tickets
 
-`docs/tickets/P3.md`. Order: P3-01, P3-02 → P3-03 → then P3-04 / P3-05 once P2-06
-and P2-07 exist (build against a mocked contract meanwhile) → P3-06 last.
+Full spec: [GitHub issue #5](https://github.com/guyHavia/final-project/issues/5)
+(backlog index in `docs/tickets/README.md`). Order: P3-01, P3-02 → P3-03 → then
+P3-04 / P3-05 once P2-06 and P2-07 exist (build against a mocked contract
+meanwhile) → P3-06 last.
 
 ## Done when
 

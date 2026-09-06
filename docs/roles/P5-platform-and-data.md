@@ -53,9 +53,10 @@ all four models for the seed; `env` for `WEATHER_API_KEY`.
 
 ## Tickets
 
-`docs/tickets/P5.md`. Order: S-02 → P5-03 (independent, do any time) → P5-02 (as
-P1-02 / P3-02 land) → P5-04 (needs P1-04, P1-05) → P5-05 (needs all four models) →
-P5-06 last.
+Full spec: [GitHub issue #3](https://github.com/guyHavia/final-project/issues/3)
+(backlog index in `docs/tickets/README.md`). Order: S-02 → P5-03 (independent, do
+any time) → P5-02 (as P1-02 / P3-02 land) → P5-04 (needs P1-04, P1-05, P2-01) →
+P5-05 (needs all four models) → P5-06 last.
 
 ## Done when
 

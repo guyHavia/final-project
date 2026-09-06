@@ -40,6 +40,17 @@ _Owner: P1. Fill in when `middleware/auth.js` lands._
 
 ### Users (admin)  — _P5, pending_
 
+Every `/api/users*` admin route is **editor-only** (`requireRole('editor')`) —
+including `GET /api/users/:id`. Only `PATCH /api/users/me` is self-service (any
+authenticated user). Full request/response shapes: `docs/tickets/P1.md` P1-05.
+
+- `POST /api/users` — editor-only
+- `GET /api/users?q=&cursor=&limit=` — editor-only (search by `username`)
+- `GET /api/users/:id` — editor-only
+- `PATCH /api/users/:id` — editor-only (`role` / `displayName` / `active` / `password`)
+- `DELETE /api/users/:id` — editor-only (soft-delete per D2)
+- `PATCH /api/users/me` — self (own `displayName`, or `password` with `currentPassword`)
+
 ### Articles  — _P2, pending_
 
 ### Comments  — _P3, pending_

@@ -216,8 +216,9 @@ Middleware you own: `requireAuth`, `requireRole(...roles)`.
 1. `models/viewEvent.model.js`: one doc per read — `{ article: ref, at: Date }`.
    Index `{ article: 1, at: 1 }`. No per-request write amplification beyond the
    insert; consider a capped-batch or `insertMany` buffer if load testing bites.
-2. Record hook: P2 (or P3's article page controller) calls a
-   `recordView(articleId)` you expose — keep the coupling to one function.
+2. Record hook: P3's `GET /article/:slug` page controller calls the
+   `recordView(articleId)` you expose, once per full page render (D10) — keep the
+   coupling to one function.
 3. `services/stats.service.js` + `GET /api/articles/:id/stats?from=&to=&bucket=hour`
    — Mongo aggregation bucketing `at` into intervals, returning
    `{ series: [{ t, count }], markers: [{ t, kind: 'publish' | 'update' }] }`.
@@ -238,8 +239,10 @@ Middleware you own: `requireAuth`, `requireRole(...roles)`.
   `author` (User ref), `state`, `publishedContent` (the frozen public version),
   `workingContent` (autosave target), `editorNote`, timestamps, `publishedAt`.
 - **State machine**: `In Preparation → Pending Editor Approval → Published`;
-  `Pending → Returned for Corrections` (with note) `→ Pending`. Reject every
-  other transition at the model/service layer, not just the controller.
+  `Pending → Returned for Corrections` (with note) `→ Pending`;
+  `Published → Pending Editor Approval` (reachable only via submit; the published
+  snapshot keeps serving the public until re-approval). 5 legal transitions total —
+  reject every other transition at the model/service layer, not just the controller.
 - **Published-version shadowing**: editing a published article writes to
   `workingContent`; the public keeps seeing `publishedContent` until an editor
   approves; approval copies working → published.
@@ -260,8 +263,7 @@ Middleware you own: `requireAuth`, `requireRole(...roles)`.
 ### P3 — Comments & Public Frontend
 
 - **Model**: `comment.model.js` — `article` ref, `authorName`, `body`,
-  `createdAt`, `deviceId` (for rate limiting). Search field = `authorName` or
-  `body`.
+  `createdAt`, `deviceId` (for rate limiting). Search field = `body`.
 - **Rate limit**: `middleware/rateLimit.js` — a guest device may post ≤ 3
   comments per minute; the **server** rejects the 4th with a clear message.
   Store recent comment timestamps per `deviceId` (a small TTL collection or an
@@ -349,3 +351,15 @@ All settled 2026-09-06. Change one → announce it and update this section.
   `deviceId` cookie set on first visit (not IP). A restart resetting the counter
   is harmless. Move to a TTL Mongo collection only if the app ever runs more than
   one instance.
+- **D9 — "Viewed / not-viewed" feed filter → client-local only.** The feed's
+  viewed/not-viewed toggle is stored per-device in `localStorage`. No server
+  `seen` query param, no `seen`/`viewed` field on any model, no schema change.
+  Guests are never persisted (CONTEXT.md), so the server cannot know what a device
+  has seen. P3 implements the filter in the browser; P2's feed endpoint is
+  untouched. Applies to `docs/roles/P2` + `docs/roles/P3`.
+- **D10 — `recordView` fires once per full article-page render.** P3's
+  `GET /article/:slug` page controller calls `recordView(articleId)` exactly once,
+  server-side, when it renders the full article page. It is **not** called on Ajax
+  comment loads and **not** from the JSON API (`GET /api/articles/:id`). One view
+  = one human page view; no write amplification. Applies to `docs/roles/P2`
+  (P2-08) + `docs/roles/P3`.

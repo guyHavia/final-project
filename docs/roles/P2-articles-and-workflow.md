@@ -18,11 +18,13 @@ the newsroom UI (P4 consumes your endpoints).
 ## Constraints from the brief
 
 - Article states: **In Preparation**, **Pending Editor Approval**, **Published**, **Returned for Corrections**.
-- Legal transitions only — reject everything else at the service layer, not just the controller:
+- Legal transitions only (5 total) — reject everything else at the service layer, not just the controller:
   - new → In Preparation
   - reporter, own article: In Preparation → Pending
   - editor: Pending → Published, or Pending → Returned (with a note)
   - reporter: Returned → Pending
+  - reporter, own **published** article: Published → Pending (reachable only via submit; the published
+    snapshot keeps serving the public until an editor re-approves)
 - Editing a **published** article: the change goes through approval again while
   the public keeps seeing the last approved version. Only after approval does new content go live.
 - Autosave: a reporter's work survives tab close / refresh / another machine, with
@@ -36,6 +38,8 @@ the newsroom UI (P4 consumes your endpoints).
 - **D1** — `article.author` is a `User` ObjectId ref; render with `.populate('author', 'displayName')`.
 - **D2** — a deleted user is soft-deleted (`active: false`); their `author` ref stays valid. Don't assume `author` is always an active user.
 - **D5** — public article URL is `/article/:slug`; JSON API under `/api`.
+- **D9** — the feed's "viewed / not-viewed" filter is client-local (`localStorage`). `GET /api/articles` takes **no** `seen`/viewed param and no model gains a `seen` field.
+- **D10** — `recordView` is called from P3's `GET /article/:slug` page controller, once per full render. Your `GET /api/articles/:id` JSON endpoint must **not** call it. P2-08 is therefore "coordinate the `recordView` call site with P3", not "wire it into the JSON read".
 
 ## Interfaces
 
@@ -52,8 +56,9 @@ the newsroom UI (P4 consumes your endpoints).
 
 ## Tickets
 
-`docs/tickets/P2.md`. Order: **P2-01 → P2-02** (both unblock most of your work and
-P4) → P2-06, P2-07 (unblock P3) → P2-03, P2-04 → P2-05 → P2-08.
+Full spec: [GitHub issue #4](https://github.com/guyHavia/final-project/issues/4)
+(backlog index in `docs/tickets/README.md`). Order: **P2-01 → P2-02** (both unblock
+most of your work and P4) → P2-06, P2-07 (unblock P3) → P2-03, P2-04 → P2-05 → P2-08.
 
 ## Done when
 
