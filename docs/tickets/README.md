@@ -54,7 +54,7 @@ S-01 skeleton ✅
 | P1-03 | Auth endpoints: login / logout / me | P1 | M | P1-01, P1-02 | done |
 | P1-04 | RBAC middleware: requireAuth / requireRole | P1 | S | P1-03 | done |
 | P1-05 | `createUser()` helper + user-admin CRUD contract | P1 | S | P1-01 | done |
-| P1-06 | View-Stats model + `recordView()` | P1 | M | S-01 | todo |
+| P1-06 | View-Stats model + `recordView()` | P1 | M | S-01 | done |
 | P1-07 | Impact Analytics endpoint + `stats.service.js` | P1 | L | P1-06, P2-02 | todo |
 | P1-08 | Login lockout + destroy-user-sessions | P1 | S | P1-03 | todo (stretch) |
 | P2-01 | Article model (states, shadow fields, author ref, slug) | P2 | M | S-01 | todo |
