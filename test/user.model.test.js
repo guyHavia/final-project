@@ -1,21 +1,18 @@
 import { test, describe, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 
+import { startMongo } from './support/mongo.js';
 import { User, createUser } from '../models/user.model.js';
 
-let mongod;
+let stopMongo;
 
 before(async () => {
-  mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
+  stopMongo = await startMongo();
   await User.syncIndexes();
 });
 
 after(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
+  await stopMongo();
 });
 
 afterEach(async () => {

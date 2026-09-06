@@ -2,23 +2,21 @@ import { test, describe, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 
+import { startMongo } from './support/mongo.js';
 import { createApp } from '../app.js';
 import { createUser, User } from '../models/user.model.js';
 
-let mongod;
+let stopMongo;
 let app;
 
 before(async () => {
-  mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
+  stopMongo = await startMongo();
   app = createApp();
 });
 
 after(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
+  await stopMongo();
 });
 
 beforeEach(async () => {

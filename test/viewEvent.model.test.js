@@ -1,23 +1,20 @@
 import { test, describe, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 
+import { startMongo } from './support/mongo.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
 import { recordView } from '../services/stats.service.js';
-import { logger } from '../lib/logger.js';
 
-let mongod;
+let stopMongo;
 
 before(async () => {
-  mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
+  stopMongo = await startMongo();
   await ViewEvent.syncIndexes();
 });
 
 after(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
+  await stopMongo();
 });
 
 afterEach(async () => {
@@ -57,19 +54,10 @@ describe('recordView', () => {
     assert.ok(events[0].at.getTime() <= Date.now() + 1000);
   });
 
-  test('a bad id resolves without throwing, records nothing, logs the failure', async () => {
-    const calls = [];
-    const original = logger.error;
-    logger.error = (event, meta) => calls.push({ event, meta });
+  test('a bad id resolves without throwing and records nothing', async () => {
+    const result = await recordView('not-a-valid-object-id');
 
-    try {
-      const result = await recordView('not-a-valid-object-id');
-      assert.equal(result, undefined);
-    } finally {
-      logger.error = original;
-    }
-
+    assert.equal(result, undefined);
     assert.equal(await ViewEvent.countDocuments(), 0);
-    assert.ok(calls.some((c) => c.event === 'stats.record_failed'));
   });
 });

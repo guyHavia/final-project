@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import { env } from './env.js';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-const SEVEN_DAYS_S = 7 * 24 * 60 * 60;
+const SEVEN_DAYS_S = SEVEN_DAYS_MS / 1000;
 
 /**
  * A session store that builds its connect-mongo store on the first session

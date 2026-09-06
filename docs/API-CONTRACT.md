@@ -64,7 +64,8 @@ session stores only `{ id, role }`, snapshotted at login (D4 + ADR 0001).
 - `POST /api/auth/logout` — `200 → { data: { ok: true } }`. Destroys the session
   and clears the cookie. Safe to call without a session.
 - `GET /api/auth/me`
-  - `200 → { data: { id, username, role, displayName } }` when authenticated.
+  - `200 → { data: { id, username, role, displayName } }` when authenticated —
+    a subset of the `userView` shape defined under "Users (admin)".
   - `401` otherwise. A user deactivated or deleted mid-session is treated as
     anonymous on their next request (the session is destroyed).
 

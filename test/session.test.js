@@ -2,21 +2,18 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import request from 'supertest';
-import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 
+import { startMongo } from './support/mongo.js';
 import { sessionMiddleware } from '../config/session.js';
 
-let mongod;
+let stopMongo;
 
 before(async () => {
-  mongod = await MongoMemoryServer.create();
-  await mongoose.connect(mongod.getUri());
+  stopMongo = await startMongo();
 });
 
 after(async () => {
-  await mongoose.disconnect();
-  await mongod.stop();
+  await stopMongo();
 });
 
 /** A minimal app that mounts the real session middleware plus two probe routes. */
