@@ -19,12 +19,29 @@ adds the route. Frontend (P3, P4) codes against this.
 
 ## How to protect a route
 
-_Owner: P1. Fill in when `middleware/auth.js` lands._
+_Owner: P1 — merged._
 
+`app.js` mounts `loadUser` after the session middleware, so `req.user` (full
+document) and `req.session.user` (`{ id, role }` snapshot) are set on every
+request that carries a valid session.
+
+```js
+import { requireAuth, requireRole } from '../middleware/auth.js';
+
+// any logged-in user
+router.get('/mine', requireAuth, asyncHandler(listMine));
+
+// editors only — authorizes on the login-snapshot role, not a live DB read
+router.post('/', requireRole('editor'), asyncHandler(create));
+
+// either role
+router.patch('/:id/autosave', requireRole('reporter', 'editor'), asyncHandler(autosave));
 ```
-// import { requireAuth, requireRole } from '../middleware/auth.js';
-// router.post('/', requireRole('editor'), asyncHandler(create));
-```
+
+`requireAuth` → 401 `{ error: { code: "unauthorized" } }` when unauthenticated.
+`requireRole(...)` → 401 when there is no session, 403
+`{ error: { code: "forbidden" } }` when the role is not allowed. Both fail via
+`next(AppError...)`; never build the error body in a route.
 
 ## Endpoints
 

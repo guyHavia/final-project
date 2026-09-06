@@ -1,4 +1,5 @@
 import { User } from '../models/user.model.js';
+import { AppError } from '../lib/AppError.js';
 
 /**
  * Attach the current user to the request when a session exists.
@@ -24,4 +25,25 @@ export async function loadUser(req, res, next) {
   user.role = snapshot.role;
   req.user = user;
   return next();
+}
+
+/** Require any authenticated user. Pair with `loadUser` upstream. */
+export function requireAuth(req, res, next) {
+  if (req.user) return next();
+  return next(AppError.unauthorized());
+}
+
+/**
+ * Require the session's snapshot role to be one of `roles`. Authorizes on
+ * `req.session.user.role` (the login snapshot, D4 + ADR 0001), never a live DB
+ * read. No session → 401; wrong role → 403. Errors go through `next(AppError)`
+ * so the terminal handler builds the envelope.
+ */
+export function requireRole(...roles) {
+  return (req, res, next) => {
+    const snapshot = req.session?.user;
+    if (!snapshot) return next(AppError.unauthorized());
+    if (!roles.includes(snapshot.role)) return next(AppError.forbidden());
+    return next();
+  };
 }

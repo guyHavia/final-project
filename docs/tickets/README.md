@@ -52,7 +52,7 @@ S-01 skeleton ✅
 | P1-01 | User model + bcrypt hashing | P1 | M | S-01 | done |
 | P1-02 | Session store (connect-mongo) + Restart test | P1 | M | P1-01 | done |
 | P1-03 | Auth endpoints: login / logout / me | P1 | M | P1-01, P1-02 | done |
-| P1-04 | RBAC middleware: requireAuth / requireRole | P1 | S | P1-03 | todo |
+| P1-04 | RBAC middleware: requireAuth / requireRole | P1 | S | P1-03 | done |
 | P1-05 | `createUser()` helper + user-admin CRUD contract | P1 | S | P1-01 | todo |
 | P1-06 | View-Stats model + `recordView()` | P1 | M | S-01 | todo |
 | P1-07 | Impact Analytics endpoint + `stats.service.js` | P1 | L | P1-06, P2-02 | todo |
