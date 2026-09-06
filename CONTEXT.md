@@ -20,7 +20,9 @@ Keep this file a glossary and nothing else.
 ## Articles
 
 - **Article state** — exactly one of: *In Preparation*, *Pending Editor Approval*,
-  *Published*, *Returned for Corrections*.
+  *Published*, *Returned for Corrections*. A *Published* article whose author submits
+  edits re-enters *Pending Editor Approval*; its published version keeps serving the
+  public until an editor re-approves.
 - **Published version** — the approved article content currently shown to the
   public.
 - **Working copy** — a reporter's in-progress edits to an article. For an

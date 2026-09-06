@@ -11,12 +11,16 @@ editor's desk, and the Impact Analytics graph.
 | Client | `public/js/login.js`, `public/js/newsroom-reporter.js`, `public/js/newsroom-editor.js`, `public/js/analytics.js`, `public/js/auth-client.js`, `public/css/newsroom.css` |
 | Library | Chart.js (via `<script>` tag or `public/vendor/`), for P4-05 only |
 
-**Not yours:** any model, any `/api` endpoint, any permission logic. The server
-enforces permissions; your UI only hides what the user cannot do.
+**Not yours:** any model, any `/api` endpoint, any **authoritative role check** —
+those live on P1/P2's `/api` guards (`requireRole`), and your UI only hides what
+the user cannot do. **Yours:** a session-**presence** redirect on your own page
+routes — an unauthenticated request to `/newsroom`, `/newsroom/review`, or
+`/newsroom/analytics` redirects to `/login` (no role decision, just "is there a
+session"). Deciding reporter-vs-editor access stays server-side on the API.
 
 ## Constraints from the brief
 
-- After login, a **reporter** lands in their work area, an **editor** in the management area. Role comes from `GET /api/auth/me`, not from anything editable in the browser.
+- After login, a **reporter** lands on `/newsroom` (their work area) and an **editor** lands on `/newsroom/review` (the management area). Role comes from `GET /api/auth/me`, not from anything editable in the browser.
 - Reporter work area: list of the reporter's own articles by state; an editor with
   **visible autosave** (a "saved" indicator, no Save button); submit-for-approval;
   read the editor's note on a returned article; resubmit after fixing.
@@ -49,8 +53,9 @@ enforces permissions; your UI only hides what the user cannot do.
 
 ## Tickets
 
-`docs/tickets/P4.md`. Order: P4-02 → P4-01 (needs P1-03) → P4-03 (needs P2-03) →
-P4-04 (needs P2-04, P2-05) → P4-05 (needs P1-07) → P4-06 last. Start against a
+Full spec: [GitHub issue #6](https://github.com/guyHavia/final-project/issues/6)
+(backlog index in `docs/tickets/README.md`). Order: P4-02 → P4-01 (needs P1-03) →
+P4-03 (needs P2-03) → P4-04 (needs P2-04, P2-05) → P4-05 (needs P1-07) → P4-06 last. Start against a
 mocked API contract before the endpoints exist.
 
 ## Done when

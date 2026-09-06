@@ -51,6 +51,13 @@ describe('AppError', () => {
     assert.equal(err.status, 403);
     assert.equal(err.code, 'forbidden');
   });
+
+  test('serviceUnavailable() carries status 503 and code service_unavailable', () => {
+    const err = AppError.serviceUnavailable();
+
+    assert.equal(err.status, 503);
+    assert.equal(err.code, 'service_unavailable');
+  });
 });
 
 describe('asyncHandler', () => {
