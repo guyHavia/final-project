@@ -49,7 +49,7 @@ S-01 skeleton ✅
 | S-01 | Shared Express skeleton | P5 | M | — | **done** (`d22944f`) |
 | S-02 | ESLint + prettier + `lint` script | P5 | S | S-01 | todo |
 | S-03 | CI: `npm test` + `lint` on PR | P5 | S | S-02 | todo (stretch) |
-| P1-01 | User model + bcrypt hashing | P1 | M | S-01 | todo |
+| P1-01 | User model + bcrypt hashing | P1 | M | S-01 | done |
 | P1-02 | Session store (connect-mongo) + Restart test | P1 | M | P1-01 | todo |
 | P1-03 | Auth endpoints: login / logout / me | P1 | M | P1-01, P1-02 | todo |
 | P1-04 | RBAC middleware: requireAuth / requireRole | P1 | S | P1-03 | todo |
