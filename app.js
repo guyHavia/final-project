@@ -1,5 +1,6 @@
 import express from 'express';
 import { apiRouter } from './routes/index.js';
+import { sessionMiddleware } from './config/session.js';
 import { notFound, errorHandler } from './middleware/error.js';
 
 /**
@@ -11,7 +12,7 @@ export function createApp() {
 
   app.use(express.json());
 
-  // --- seam: session middleware mounts here (P1, config/session.js) ---
+  app.use(sessionMiddleware());
   // --- seam: EJS view engine + server-rendered page routes (P3 / P4) ---
 
   app.use('/api', apiRouter);
