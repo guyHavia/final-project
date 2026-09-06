@@ -32,11 +32,24 @@ _Owner: P1. Fill in when `middleware/auth.js` lands._
 
 `200 → { "data": { "status": "ok" } }`. No auth. Liveness check.
 
-### Auth  — _P1, pending_
+### Auth  — _P1_
 
-- `POST /api/auth/login`
-- `POST /api/auth/logout`
-- `GET  /api/auth/me`
+Session is a signed `connect.sid` cookie (httpOnly, `sameSite=lax`, 7-day TTL),
+backed by the `sessions` collection so a login survives a server restart. The
+session stores only `{ id, role }`, snapshotted at login (D4 + ADR 0001).
+
+- `POST /api/auth/login` — body `{ username, password }`.
+  - `200 → { data: { id, username, role, displayName } }` and a `Set-Cookie`.
+  - `400` if `username` or `password` is missing.
+  - `401 { error: { message: "invalid credentials", code: "unauthorized" } }`
+    for an unknown username, a wrong password, **or** a deactivated account —
+    one message, no user enumeration.
+- `POST /api/auth/logout` — `200 → { data: { ok: true } }`. Destroys the session
+  and clears the cookie. Safe to call without a session.
+- `GET /api/auth/me`
+  - `200 → { data: { id, username, role, displayName } }` when authenticated.
+  - `401` otherwise. A user deactivated or deleted mid-session is treated as
+    anonymous on their next request (the session is destroyed).
 
 ### Users (admin)  — _P5, pending_
 
