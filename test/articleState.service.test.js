@@ -1,8 +1,11 @@
-import { test, describe } from 'node:test';
+import { test, describe, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import mongoose from 'mongoose';
 
-import { canTransition, applyTransition, slugify } from '../services/articleState.service.js';
+import { canTransition, applyTransition, slugify, saveWithSlugRetry } from '../services/articleState.service.js';
 import { AppError } from '../lib/AppError.js';
+import { Article } from '../models/article.model.js';
+import { startMongo } from './support/mongo.js';
 
 /** Minimal fixture shaped like an Article doc — see P2-02 spec. */
 function makeArticle(overrides = {}) {
@@ -113,6 +116,18 @@ describe('articleState.service', () => {
       assert.equal(article.history[0].kind, 'publish');
       assert.equal(article.history[0].by, 'editor-1');
       assert.equal(article.submittedAt, undefined);
+    });
+
+    test('Pending Editor Approval -> Published: a title that slugifies to \'\' (all punctuation) falls back to a non-empty base slug', () => {
+      const article = makeArticle({
+        state: 'Pending Editor Approval',
+        title: '!!!',
+        submittedAt: new Date(),
+      });
+      applyTransition(article, 'Published', editor('editor-1'));
+      assert.equal(article.state, 'Published');
+      assert.notEqual(article.slug, '');
+      assert.ok(article.slug, 'slug must be a non-empty fallback, not left blank');
     });
 
     test('Pending Editor Approval -> Published: a later approval increments version, keeps firstPublishedAt/slug, and pushes "update"', () => {
@@ -332,6 +347,146 @@ describe('articleState.service', () => {
       assert.equal(slugify('  My Great Article!! '), 'my-great-article');
       assert.equal(slugify('Already-slugged'), 'already-slugged');
       assert.equal(slugify('Foo   Bar___Baz'), 'foo-bar-baz');
+    });
+  });
+
+  describe('saveWithSlugRetry', () => {
+    /** Builds a duplicate-key error shaped like the one Mongo/Mongoose raises on a violated unique index. */
+    function slugDuplicateKeyError(slug) {
+      const err = new Error(
+        `E11000 duplicate key error collection: test.articles index: slug_1 dup key: { slug: "${slug}" }`,
+      );
+      err.code = 11000;
+      err.keyPattern = { slug: 1 };
+      err.keyValue = { slug };
+      return err;
+    }
+
+    test('retries with an incrementing numeric suffix on a slug conflict, then succeeds', async () => {
+      const article = { slug: 'same-headline' };
+      const slugsAttempted = [];
+      let attempts = 0;
+      article.save = async () => {
+        attempts += 1;
+        slugsAttempted.push(article.slug);
+        if (attempts < 3) throw slugDuplicateKeyError(article.slug);
+        return article;
+      };
+
+      const result = await saveWithSlugRetry(article);
+
+      assert.equal(result, article);
+      assert.deepEqual(slugsAttempted, ['same-headline', 'same-headline-2', 'same-headline-3']);
+      assert.equal(article.slug, 'same-headline-3');
+    });
+
+    test('succeeds on the first attempt when there is no conflict', async () => {
+      const article = { slug: 'unique-title' };
+      article.save = async () => article;
+      await saveWithSlugRetry(article);
+      assert.equal(article.slug, 'unique-title');
+    });
+
+    test('rethrows a duplicate-key error on a different field without touching slug', async () => {
+      const article = { slug: 'same-headline' };
+      article.save = async () => {
+        const err = new Error('E11000 duplicate key error on author');
+        err.code = 11000;
+        err.keyPattern = { author: 1 };
+        err.keyValue = { author: 'x' };
+        throw err;
+      };
+
+      await assert.rejects(() => saveWithSlugRetry(article), (err) => err.code === 11000);
+      assert.equal(article.slug, 'same-headline');
+    });
+
+    test('rethrows a non-duplicate-key error unchanged', async () => {
+      const article = { slug: 'same-headline' };
+      const boom = new Error('connection lost');
+      article.save = async () => {
+        throw boom;
+      };
+
+      await assert.rejects(() => saveWithSlugRetry(article), (err) => err === boom);
+    });
+  });
+
+  describe('publish slug collisions (real Article model + Mongo)', () => {
+    let stopMongo;
+
+    before(async () => {
+      stopMongo = await startMongo();
+      await Article.syncIndexes();
+    });
+
+    after(async () => {
+      await stopMongo();
+    });
+
+    afterEach(async () => {
+      await Article.deleteMany({});
+    });
+
+    /** Creates and persists a Pending-Editor-Approval article ready to be published. */
+    async function makePendingArticle(title) {
+      return Article.create({
+        category: 'politics',
+        author: new mongoose.Types.ObjectId(),
+        title,
+        body: 'body text',
+        state: 'Pending Editor Approval',
+        submittedAt: new Date(),
+      });
+    }
+
+    const publish = (article) =>
+      applyTransition(article, 'Published', { id: new mongoose.Types.ObjectId(), role: 'editor' });
+
+    test('two articles publishing with the same title get "same-headline" then "same-headline-2", not a duplicate-key crash', async () => {
+      const articleA = await makePendingArticle('Same Headline');
+      const articleB = await makePendingArticle('Same Headline');
+
+      publish(articleA);
+      await saveWithSlugRetry(articleA);
+      assert.equal(articleA.slug, 'same-headline');
+
+      publish(articleB);
+      await saveWithSlugRetry(articleB);
+      assert.equal(articleB.slug, 'same-headline-2');
+
+      const fetchedA = await Article.findById(articleA._id);
+      const fetchedB = await Article.findById(articleB._id);
+      assert.equal(fetchedA.slug, 'same-headline');
+      assert.equal(fetchedB.slug, 'same-headline-2');
+    });
+
+    test('a third same-title article continues the suffix to "same-headline-3"', async () => {
+      const articleA = await makePendingArticle('Same Headline');
+      const articleB = await makePendingArticle('Same Headline');
+      const articleC = await makePendingArticle('Same Headline');
+
+      for (const article of [articleA, articleB, articleC]) {
+        publish(article);
+        await saveWithSlugRetry(article);
+      }
+
+      assert.equal(articleA.slug, 'same-headline');
+      assert.equal(articleB.slug, 'same-headline-2');
+      assert.equal(articleC.slug, 'same-headline-3');
+    });
+
+    test('two all-punctuation titles (both slugify to \'\') get distinct fallback slugs instead of colliding on \'\'', async () => {
+      const articleA = await makePendingArticle('!!!');
+      const articleB = await makePendingArticle('???');
+
+      publish(articleA);
+      await saveWithSlugRetry(articleA);
+      publish(articleB);
+      await saveWithSlugRetry(articleB);
+
+      assert.equal(articleA.slug, 'article');
+      assert.equal(articleB.slug, 'article-2');
     });
   });
 });
