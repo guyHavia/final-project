@@ -1,5 +1,8 @@
 import express from 'express';
 import { apiRouter } from './routes/index.js';
+import { sessionMiddleware } from './config/session.js';
+import { loadUser } from './middleware/auth.js';
+import { asyncHandler } from './lib/asyncHandler.js';
 import { notFound, errorHandler } from './middleware/error.js';
 
 /**
@@ -11,7 +14,8 @@ export function createApp() {
 
   app.use(express.json());
 
-  // --- seam: session middleware mounts here (P1, config/session.js) ---
+  app.use(sessionMiddleware());
+  app.use(asyncHandler(loadUser));
   // --- seam: EJS view engine + server-rendered page routes (P3 / P4) ---
 
   app.use('/api', apiRouter);
