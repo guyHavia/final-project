@@ -4,6 +4,25 @@ import mongoose from 'mongoose';
 const STATES = ['In Preparation', 'Pending Editor Approval', 'Published', 'Returned for Corrections'];
 
 /**
+ * The shared category list (issue #4, P2-01 schema section: "constrained to a
+ * shared category list constant"). Single source of truth for every place a
+ * category value is read or written — the working copy, the `published`
+ * snapshot, the category-filter index, and P5's seed all use this list.
+ */
+export const CATEGORIES = [
+  'politics',
+  'business',
+  'technology',
+  'science',
+  'health',
+  'sports',
+  'entertainment',
+  'world',
+  'opinion',
+  'culture',
+];
+
+/**
  * The frozen public snapshot of an article's most recently approved content.
  * Overwritten wholesale on every approval; `version` increments; `publishedAt`
  * is the current published version's time. `null` until the first approval.
@@ -14,7 +33,7 @@ const publishedSchema = new mongoose.Schema(
     abstract: String,
     body: String,
     image: String,
-    category: String,
+    category: { type: String, enum: CATEGORIES },
     publishedAt: Date,
     version: Number,
   },
@@ -41,8 +60,7 @@ const articleSchema = new mongoose.Schema(
     // require sparse to allow multiple null/missing values. Generation logic
     // (slugify) is out of scope for this ticket.
     slug: { type: String, unique: true, lowercase: true, trim: true, sparse: true },
-    // No enum: the category list is a future product decision owned by another ticket.
-    category: { type: String, required: true, trim: true },
+    category: { type: String, required: true, trim: true, enum: CATEGORIES },
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     state: { type: String, enum: STATES, default: 'In Preparation', required: true, index: true },
 

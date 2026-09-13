@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 
 import { startMongo } from './support/mongo.js';
-import { Article } from '../models/article.model.js';
+import { Article, CATEGORIES } from '../models/article.model.js';
 
 let stopMongo;
 
@@ -66,9 +66,15 @@ describe('Article model', () => {
     }
   });
 
-  test('accepts an arbitrary category string with no enum restriction', () => {
+  test('rejects a category outside the shared CATEGORIES list', () => {
     const err = new Article({ ...valid(), category: 'underwater-basket-weaving' }).validateSync();
-    assert.equal(err, undefined);
+    assert.ok(err.errors.category);
+  });
+
+  test('accepts each of the agreed CATEGORIES values', () => {
+    for (const category of CATEGORIES) {
+      assert.equal(new Article({ ...valid(), category }).validateSync(), undefined);
+    }
   });
 
   test('published defaults to unset, and an article saves fine without it', async () => {
