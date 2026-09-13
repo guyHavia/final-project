@@ -112,4 +112,24 @@ P5 reuses `createUser({ username, password, role, displayName })` from
 
 ### Comments  — _P3, pending_
 
-### Article stats  — _P1, pending_
+### Article stats  — _P1_
+
+- `GET /api/articles/:id/stats?from&to&bucket` — editor-only (`requireRole('editor')`).
+  - `bucket` — `'hour' | 'day'`, default `'hour'`. Any other non-empty value →
+    `400 { error: { message: "invalid bucket", code: "bad_request" } }`.
+  - `from` / `to` — ISO 8601 date strings, optional. `to` defaults to now;
+    `from` defaults to 24h before the effective `to`. Given but unparsable
+    (`new Date(x)` is `Invalid Date`) → `400 { error: { message: "invalid from/to", code: "bad_request" } }`.
+  - `200 → { data: { series: [{ t, count }], markers: [{ t, kind }] } }`.
+    - `series` — one point per `bucket`-sized boundary spanning
+      `[from, to]` inclusive, ascending, no gaps; a bucket with zero
+      `ViewEvent`s still appears with `count: 0`. Bucketing uses Mongo's
+      `$dateTrunc` on `ViewEvent.at`; empty buckets are filled in code
+      after the aggregation.
+    - `markers` — every entry in the article's `history` (not filtered by
+      `from`/`to`), mapped to `{ t: entry.at.toISOString(), kind: entry.kind }`
+      and sorted ascending by `at`.
+  - `401` with no session; `403` for a `reporter`.
+  - `400 { error: { code: "invalid_id" } }` if `:id` is not a well-formed
+    ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
+  - `404` if `:id` is well-formed but no such article exists.
