@@ -57,7 +57,7 @@ S-01 skeleton ✅
 | P1-06 | View-Stats model + `recordView()` | P1 | M | S-01 | done |
 | P1-07 | Impact Analytics endpoint + `stats.service.js` | P1 | L | P1-06, P2-02 | todo |
 | P1-08 | Login lockout + destroy-user-sessions | P1 | S | P1-03 | todo (stretch) |
-| P2-01 | Article model (states, shadow fields, author ref, slug) | P2 | M | S-01 | todo |
+| P2-01 | Article model (states, shadow fields, author ref, slug) | P2 | M | S-01 | done |
 | P2-02 | State-machine service (transitions + guards) | P2 | L | P2-01 | todo |
 | P2-03 | Reporter authoring endpoints (create/edit/autosave/submit) | P2 | L | P2-02, P1-04 | todo |
 | P2-04 | Editor workflow endpoints (approve/return/edit/delete) | P2 | L | P2-02, P1-04 | todo |
