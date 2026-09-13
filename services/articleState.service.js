@@ -1,4 +1,5 @@
 import { AppError } from '../lib/AppError.js';
+import { logger } from '../lib/logger.js';
 
 /**
  * The legal edges of the article lifecycle. Anything not listed here — including
@@ -19,6 +20,12 @@ export function slugify(title) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
+
+/** Used as the slug base when a title slugifies to '' (e.g. an all-punctuation title). */
+const EMPTY_SLUG_FALLBACK = 'article';
+
+/** Mongo/Mongoose duplicate-key error code, raised when a unique index is violated. */
+const DUPLICATE_KEY_CODE = 11000;
 
 function isReachable(from, to) {
   return Boolean(REACHABLE[from]?.includes(to));
@@ -120,7 +127,7 @@ export function applyTransition(article, to, actor, { note } = {}) {
     if (!wasAlreadyPublishedBefore) {
       article.firstPublishedAt = now;
       if (!article.slug) {
-        article.slug = slugify(article.title);
+        article.slug = slugify(article.title) || EMPTY_SLUG_FALLBACK;
       }
     }
 
@@ -138,4 +145,36 @@ export function applyTransition(article, to, actor, { note } = {}) {
   article.submittedAt = undefined;
   article.state = to;
   return article;
+}
+
+/** True for a Mongo/Mongoose duplicate-key error raised specifically by the `slug` unique index. */
+function isSlugConflict(err) {
+  if (err?.code !== DUPLICATE_KEY_CODE) return false;
+  if (err.keyPattern) return Object.prototype.hasOwnProperty.call(err.keyPattern, 'slug');
+  if (err.keyValue) return Object.prototype.hasOwnProperty.call(err.keyValue, 'slug');
+  return false;
+}
+
+/**
+ * Saves `article` (any object exposing an async `save()`, e.g. a Mongoose
+ * document), resolving a first-publish slug collision instead of letting the
+ * `slug` unique-index violation crash the caller: on an `11000` conflict
+ * specifically on `slug`, appends/bumps a numeric suffix (`base-2`, `base-3`,
+ * …) and retries, up to `maxAttempts`. Any other error — including an `11000`
+ * on a different field — is rethrown untouched, and `article.slug` is left as
+ * it was when that error was raised.
+ */
+export async function saveWithSlugRetry(article, { maxAttempts = 50 } = {}) {
+  const base = article.slug;
+  for (let suffix = 1; suffix <= maxAttempts; suffix += 1) {
+    if (suffix > 1) {
+      article.slug = `${base}-${suffix}`;
+    }
+    try {
+      return await article.save();
+    } catch (err) {
+      if (!isSlugConflict(err) || suffix === maxAttempts) throw err;
+      logger.warn('article.slug_collision_retry', { attemptedSlug: article.slug, nextSuffix: suffix + 1 });
+    }
+  }
 }
