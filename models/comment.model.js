@@ -35,7 +35,7 @@ const commentSchema = new mongoose.Schema({
 });
 
 // Compound index to serve newest-first per-article lists efficiently at scale
-commentSchema.index({ article: 1, createdAt: 1 });
+commentSchema.index({ article: 1, createdAt: -1 }); 
 
 // Ensure deviceId is never serialized in API responses[cite: 2]
 commentSchema.set('toJSON', {
