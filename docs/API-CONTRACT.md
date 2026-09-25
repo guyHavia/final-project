@@ -110,7 +110,35 @@ P5 reuses `createUser({ username, password, role, displayName })` from
 
 ### Articles  — _P2, pending_
 
-### Comments  — _P3, pending_
+### Comments — _P3_
+
+- `GET /api/articles/:articleId/comments?cursor&limit&q` — list one article's comments, newest first. Not rate-limited.
+  - `cursor` — opaque string, optional.
+  - `limit` — `1` to `100`, default `20`.
+  - `q` — case-insensitive substring match on `body`, optional.
+  - `200 → { data: { items: [Comment], nextCursor: "<opaque or null>" } }`.
+    - `items` — comments ordered newest first.
+    - `nextCursor` — opaque string when more remain, `null` on the last page.
+  - `400 { error: { code: "invalid_id" } }` if `:articleId` is not a well-formed 
+    ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
+  - `404` if `:articleId` is well-formed but no such article exists or it is not `Published`.
+
+- `POST /api/articles/:articleId/comments` — create one comment. Guarded by `rateLimit`.
+  - Request body: `{ "authorName": "...", "body": "..." }`.
+  - `201 → { data: { id, article, authorName, body, createdAt } }`. Note: `deviceId` is never serialized.
+  - `400 { error: { code: "validation" } }` on a missing/blank field or over max length 
+    (mapped automatically by `errorHandler`'s `ValidationError` case).
+  - `400 { error: { code: "invalid_id" } }` if `:articleId` is not a well-formed ObjectId.
+  - `404` if `:articleId` is well-formed but no such article exists or it is not `Published`.
+  - `429 { error: { message: "you are posting too fast, wait a moment", code: "rate_limited" } }` 
+    if 4th comment from this `deviceId` within 60s; no document is created.
+
+- `DELETE /api/comments/:id` — editor-only (`requireRole('editor')`).
+  - `200 → { data: { ok: true } }`.
+  - `401` with no session; `403` for a `reporter`.
+  - `400 { error: { code: "invalid_id" } }` if `:id` is not a well-formed 
+    ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
+  - `404` if `:id` is well-formed but no such comment exists or is already deleted.
 
 ### Article stats  — _P1_
 
