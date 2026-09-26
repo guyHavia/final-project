@@ -5,6 +5,7 @@ import { env } from './env.js';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_S = SEVEN_DAYS_MS / 1000;
+const SESSIONS_COLLECTION = 'sessions';
 
 /**
  * A session store that builds its connect-mongo store on the first session
@@ -77,4 +78,31 @@ export function sessionMiddleware() {
       maxAge: SEVEN_DAYS_MS,
     },
   });
+}
+
+/**
+ * Delete every session document belonging to `userId` from the `sessions`
+ * collection, so a deactivated or deleted user is logged out everywhere at
+ * once (D2/D4). connect-mongo stores each session's data as a JSON string
+ * (its default `stringify: true`), so matching by user id means reading and
+ * parsing docs rather than a Mongo-level field query.
+ */
+export async function destroySessionsForUser(userId) {
+  const collection = mongoose.connection.db.collection(SESSIONS_COLLECTION);
+  const idsToDelete = [];
+
+  for await (const doc of collection.find({}, { projection: { session: 1 } })) {
+    let session;
+    try {
+      session = JSON.parse(doc.session);
+    } catch {
+      continue;
+    }
+    if (session?.user?.id === String(userId)) {
+      idsToDelete.push(doc._id);
+    }
+  }
+
+  if (idsToDelete.length === 0) return;
+  await collection.deleteMany({ _id: { $in: idsToDelete } });
 }
