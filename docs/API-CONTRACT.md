@@ -61,6 +61,13 @@ session stores only `{ id, role }`, snapshotted at login (D4 + ADR 0001).
   - `401 { error: { message: "invalid credentials", code: "unauthorized" } }`
     for an unknown username, a wrong password, **or** a deactivated account —
     one message, no user enumeration.
+  - `429 { error: { message: "too many failed login attempts, try again later", code: "rate_limited" } }`
+    after 5 failed attempts for that username within 15 minutes; the lockout
+    lasts 15 minutes from the 5th failure. Checked before the credentials are
+    looked up, so a locked-out username gets 429 even with the correct
+    password. A successful login clears that username's failure count.
+    In-memory `Map`, same style as the comment rate limiter (D8) — a restart
+    resets it, which is harmless.
 - `POST /api/auth/logout` — `200 → { data: { ok: true } }`. Destroys the session
   and clears the cookie. Safe to call without a session.
 - `GET /api/auth/me`
@@ -95,12 +102,14 @@ P5 reuses `createUser({ username, password, role, displayName })` from
 - **`PATCH /api/users/:id`** — editor-only. Any subset of
   `{ role, displayName, active, password }`. `password` is re-hashed via the
   model's `setPassword`. Setting `active: false` is the soft-delete path (D2)
-  and should also revoke that user's sessions (see P1-08 `destroySessionsForUser`).
+  and must also call `destroySessionsForUser(id)` (`config/session.js`, P1-08)
+  so the user is logged out everywhere immediately.
   - `200 → { data: userView }`; `400` on an unknown field or bad `role`; `404` if not found.
 - **`DELETE /api/users/:id`** — editor-only. **Soft-delete** (D2): sets
   `active: false`; the byline and `author` refs stay valid. A hard delete is
   allowed **only** when the user has zero articles (coordinate with P2's
-  article count).
+  article count). Either path must also call `destroySessionsForUser(id)`
+  (`config/session.js`, P1-08).
   - `200 → { data: { ok: true, deleted: "soft" | "hard" } }`; `404` if not found.
 - **`PATCH /api/users/me`** — any authenticated user, own account only. Body is
   `{ displayName }` and/or `{ password, currentPassword }`; changing the
