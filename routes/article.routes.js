@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import {
   listArticles,
@@ -9,6 +9,9 @@ import {
   editArticleHandler,
   autosaveArticleHandler,
   submitArticleHandler,
+  approveArticleHandler,
+  returnArticleHandler,
+  deleteArticleHandler,
 } from '../controllers/article.controller.js';
 
 // Mounted at `/articles` in routes/index.js. `/mine` is declared before `/:id`
@@ -24,3 +27,9 @@ articleRoutes.post('/', requireAuth, asyncHandler(createArticleHandler));
 articleRoutes.patch('/:id', requireAuth, asyncHandler(editArticleHandler));
 articleRoutes.patch('/:id/autosave', requireAuth, asyncHandler(autosaveArticleHandler));
 articleRoutes.post('/:id/submit', requireAuth, asyncHandler(submitArticleHandler));
+
+// P2-04 — editor decisions (editors only; loadUser has already dropped a
+// deactivated user's session, so requireRole sees only active editors).
+articleRoutes.post('/:id/approve', requireRole('editor'), asyncHandler(approveArticleHandler));
+articleRoutes.post('/:id/return', requireRole('editor'), asyncHandler(returnArticleHandler));
+articleRoutes.delete('/:id', requireRole('editor'), asyncHandler(deleteArticleHandler));
