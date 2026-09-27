@@ -142,8 +142,8 @@ P5 reuses `createUser({ username, password, role, displayName })` from
   - `404` if `:articleId` is well-formed but no such article exists or it has never been published.
   - `429 { error: { message: "you are posting too fast, wait a moment", code: "rate_limited" } }` 
     if 4th comment from this `deviceId` within 60s; no document is created.
-    `deviceId` is an httpOnly cookie issued on the first comment; `app.js` parses
-    the `Cookie` header into `req.cookies` with `middleware/cookies.js`.
+    `deviceId` is an httpOnly cookie issued on the first request; `app.js` parses
+    the `Cookie` header into `req.cookies` with `cookie-parser`.
 
 - `DELETE /api/comments/:id` — editor-only (`requireRole('editor')`).
   - `200 → { data: { ok: true } }`.

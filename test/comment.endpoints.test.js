@@ -4,7 +4,7 @@ import express from 'express';
 import request from 'supertest';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import { parseCookies } from '../middleware/cookies.js';
+import cookieParser from 'cookie-parser';
 
 import commentRoutes from '../routes/comment.routes.js';
 import { Article } from '../models/article.model.js';
@@ -32,7 +32,7 @@ test.before(async () => {
 
     app = express();
     app.use(express.json());
-    app.use(parseCookies);
+    app.use(cookieParser());
     app.use(mockSession);
     
     // Mount router exactly as expected centrally at /api

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import request from 'supertest';
-import { parseCookies } from '../middleware/cookies.js';
+import cookieParser from 'cookie-parser';
 import rateLimit, { checkRateLimit, assignDeviceId } from '../middleware/rateLimit.js';
 import { AppError } from '../lib/AppError.js';
 
@@ -44,7 +44,7 @@ test('HTTP integration: Issues cookie, limits requests, and delegates errors', a
     const app = express();
     const store = new Map();
     
-    app.use(parseCookies);
+    app.use(cookieParser());
     
     // Mount the defensive cookie assigner and the rate limiter together
     app.post('/comment', assignDeviceId, rateLimit({ store, max: 3, windowMs: 60000 }), (req, res) => {

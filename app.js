@@ -2,9 +2,11 @@ import express from 'express';
 import { apiRouter } from './routes/index.js';
 import { sessionMiddleware } from './config/session.js';
 import { loadUser } from './middleware/auth.js';
-import { parseCookies } from './middleware/cookies.js';
 import { asyncHandler } from './lib/asyncHandler.js';
 import { notFound, errorHandler } from './middleware/error.js';
+
+import cookieParser from 'cookie-parser';
+import { assignDeviceId } from './middleware/rateLimit.js';
 
 /**
  * Build the Express app WITHOUT starting a listener or opening a DB connection,
@@ -14,8 +16,8 @@ export function createApp() {
   const app = express();
 
   app.use(express.json());
-  // Fills req.cookies — the comment rate limit reads the guest's deviceId from it.
-  app.use(parseCookies);
+  app.use(cookieParser());
+  app.use(assignDeviceId);
 
   app.use(sessionMiddleware());
   app.use(asyncHandler(loadUser));
