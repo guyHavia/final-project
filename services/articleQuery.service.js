@@ -217,7 +217,43 @@ export async function getArticleForViewer(id, viewer) {
 
   if (isEditor || isOwner) return toFullArticle(withAuthor);
   if (!doc.published || !doc.firstPublishedAt) throw AppError.notFound('article not found');
-  return { ...toPublicCard(withAuthor), body: doc.published.body ?? '' };
+  return toPublicArticle(withAuthor);
+}
+
+const OBJECT_ID = /^[0-9a-f]{24}$/i;
+
+/**
+ * P2-07 — the server-render hook for P3's `GET /article/:slug` page. Returns one
+ * public article with its FULL body (the SEO requirement: the text is in the
+ * first HTML response), or `null` so the page can render its own 404.
+ *
+ * - Looks up by slug (case-insensitive: slugs are stored lowercase), then falls
+ *   back to the article id when no slug matches (D5).
+ * - Only ever reads the published version — never the working copy — so a
+ *   pending or returned revision can't leak into the page.
+ * - Never throws for bad input and does not count a view (P2-08 / D10).
+ *
+ * Shape: the feed card (`toPublicCard`) plus `body`, so the feed and the article
+ * page use the same field names.
+ */
+export async function getArticleForRender(slugOrId) {
+  if (typeof slugOrId !== 'string') return null;
+  const key = slugOrId.trim();
+  if (!key) return null;
+
+  let doc = await Article.findOne({ slug: key.toLowerCase(), ...PUBLIC_FILTER }).lean();
+  if (!doc && OBJECT_ID.test(key)) {
+    doc = await Article.findOne({ _id: key, ...PUBLIC_FILTER }).lean();
+  }
+  if (!doc?.published) return null;
+
+  const [withAuthor] = await attachAuthors([doc]);
+  return toPublicArticle(withAuthor);
+}
+
+/** The public view of one article: the published version plus its full body. */
+function toPublicArticle(doc) {
+  return { ...toPublicCard(doc), body: doc.published.body ?? '' };
 }
 
 function toFullArticle(doc) {
