@@ -4,6 +4,7 @@ import { authRoutes } from './auth.routes.js';
 import { statsRoutes } from './stats.routes.js';
 import { weatherRoutes } from './weather.routes.js';
 import { userRoutes } from './users.routes.js';
+import commentRoutes from './comment.routes.js';
 
 export const apiRouter = Router();
 
@@ -16,7 +17,6 @@ apiRouter.use('/auth', authRoutes);
 // GET /api/articles/:id/stats. P2's full articles router will mount here too.
 apiRouter.use('/articles', statsRoutes);
 apiRouter.use('/weather', weatherRoutes);
-
-// Resource routers mount here as they land:
 apiRouter.use('/users', userRoutes);
-//   apiRouter.use('/articles', articleRouter); // P2 (+ comments, stats nested)
+apiRouter.use('/', commentRoutes); // Maps /articles/:articleId/comments and /comments/:id
+
