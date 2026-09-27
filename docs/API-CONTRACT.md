@@ -150,10 +150,13 @@ name (D2); an author whose document is gone shows `"Unknown author"`.
   - `q` / `category` match the **working copy**. Always ordered by `updatedAt` desc; `sort` is ignored.
   - `200 → { data: { items: [WorkItem], nextCursor } }`.
   - `WorkItem` = `{ id, slug, state, title, abstract, image, category, author,
-    editorNote, hasPublishedVersion, publishedAt, submittedAt, updatedAt, viewCount }`
+    editorNote, hasPublishedVersion, hasUnsubmittedChanges, publishedAt, submittedAt,
+    updatedAt, viewCount }`
     — working-copy fields. `editorNote` is set only when `state` is
     `Returned for Corrections`, otherwise `null`. `hasPublishedVersion` marks a
-    revision of an already-public article.
+    revision of an already-public article. `hasUnsubmittedChanges` is `true` only
+    for a `Published` article whose working copy differs from its approved
+    version — edits not yet sent for review (use it to prompt "Submit changes").
 
 - **`GET /api/articles/mine?state=&cursor=&limit=`** — `requireAuth`; the caller's own articles.
   - Every state, or one `state` (unknown → `400`). Ordered by `updatedAt` desc.
@@ -162,8 +165,8 @@ name (D2); an author whose document is gone shows `"Unknown author"`.
 - **`GET /api/articles/:id`** — one article.
   - **Its author, or any editor** → the full document:
     `{ id, slug, state, title, abstract, body, image, category, author, editorNote,
-    submittedAt, published, firstPublishedAt, history: [{ at, kind, by }],
-    viewCount, createdAt, updatedAt }`. Top-level content fields are the working
+    submittedAt, published, hasUnsubmittedChanges, firstPublishedAt,
+    history: [{ at, kind, by }], viewCount, createdAt, updatedAt }`. Top-level content fields are the working
     copy; `published` is the approved snapshot (or `null`) — enough for a diff.
   - **Anyone else** → the published version only: `Card` plus `body`. `404` if
     the article was never published (a draft's existence is not revealed).
