@@ -1,4 +1,4 @@
-const { describe, it, before, after, beforeEach } = require('node:test');
+import { describe, it, before, after, beforeEach } from 'node:test';
 const assert = require('node:assert/strict');
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');

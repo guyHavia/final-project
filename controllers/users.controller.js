@@ -1,7 +1,7 @@
 import { User, createUser } from '../models/user.model.js';
 import { Article } from '../models/article.model.js';
 import { sendData } from '../lib/respond.js';
-import AppError from '../lib/AppError.js';
+import { AppError } from '../lib/AppError.js';
 import { destroySessionsForUser } from '../config/session.js';
 
 function toUserView(user) {
