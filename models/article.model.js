@@ -65,7 +65,10 @@ const articleSchema = new mongoose.Schema(
     state: { type: String, enum: STATES, default: 'In Preparation', required: true },
 
     // Working copy — what the reporter edits, what autosave writes.
-    title: { type: String, required: true },
+    // `title` is not required here so autosave can store a half-written draft;
+    // create, full edit and submit require it (articleAuthoring.service.js and
+    // the state machine's content guard).
+    title: { type: String, default: '' },
     abstract: String,
     body: String,
     image: String,
