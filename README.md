@@ -3,6 +3,33 @@
 News system — course final project. Node.js + Express, MongoDB + Mongoose, EJS
 for server-rendered pages, Vanilla JS + Ajax on the client.
 
+## Quick Start (5 steps)
+
+```bash
+# 1. Install Node dependencies
+npm install
+
+# 2. Create your local config (only needed once)
+cp .env.example .env
+#    → open .env and set SESSION_SECRET to any long random string
+
+# 3. Start MongoDB (requires Docker Desktop to be running)
+docker compose up -d
+
+# 4. Seed the demo database (500 articles, users, comments, view events)
+npm run seed
+#    → credentials are printed at the end — save them!
+
+# 5. Start the dev server (auto-restarts on file changes)
+npm run dev
+#    → open http://localhost:3000
+```
+
+> [!NOTE]
+> **Don't have Docker?** Alternatives for step 3:
+> - Free cloud DB: sign up at [MongoDB Atlas](https://www.mongodb.com/atlas), create a free M0 cluster, paste the connection string into `.env` as `MONGODB_URI=mongodb+srv://...`
+> - Local install: install [MongoDB Community Server](https://www.mongodb.com/try/download/community) — no `.env` change needed.
+
 ## Prerequisites
 
 - Node.js >= 20
@@ -11,26 +38,15 @@ for server-rendered pages, Vanilla JS + Ajax on the client.
   - **MongoDB Atlas:** free cloud cluster, paste the URI into `.env`
   - **Local install:** MongoDB Community Server running on `127.0.0.1:27017`
 
-## Setup
-
-```
-npm install
-cp .env.example .env      # then fill in SESSION_SECRET and (optionally) WEATHER_API_KEY
-docker compose up -d      # start MongoDB (skip if using Atlas or a local install)
-```
-
-## Run
+## All npm scripts
 
 ```
 npm run dev      # auto-restart on change (node --watch)
 npm start        # plain run
-npm test         # node --test
+npm test         # node --test (no DB needed)
 npm run lint     # eslint .
-npm run seed     # load demo data (500 articles, users, comments, view stats)
+npm run seed     # load demo data — prints login credentials at the end
 ```
-
-`npm run dev` / `npm start` need a reachable MongoDB. `npm test` does not — the
-skeleton tests exercise the Express app without a DB connection.
 
 ## Project structure
 
