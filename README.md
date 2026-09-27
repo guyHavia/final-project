@@ -30,7 +30,7 @@ docker compose exec app node seed/seed.js
 docker compose down
 
 # Restart the app
-docker compose restart
+docker compose restart (Then seed if needed)
 
 # View live server logs
 docker compose logs -f app
