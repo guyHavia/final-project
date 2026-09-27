@@ -21,6 +21,7 @@ cp .env.example .env      # then fill in MONGODB_URI, SESSION_SECRET, WEATHER_AP
 npm run dev      # auto-restart on change (node --watch)
 npm start        # plain run
 npm test         # node --test
+npm run lint     # eslint .
 npm run seed     # load demo data (500 articles, users, comments, view stats)
 ```
 
@@ -35,7 +36,7 @@ app.js             createApp() — Express wiring, no listener/DB (testable)
 config/
   env.js           all process config, read once
   db.js            Mongoose connection
-  session.js       express-session + connect-mongo            (P1, not yet added)
+  session.js       express-session + connect-mongo            (P1)
 lib/
   logger.js        structured JSON logger
   AppError.js      client-safe error with HTTP status + code
@@ -43,8 +44,8 @@ lib/
   respond.js       sendData(res, data) — the { data } success envelope
 middleware/
   error.js         notFound + terminal errorHandler
-  auth.js          requireAuth, requireRole                   (P1, not yet added)
-  rateLimit.js     guest comment limit                        (P3, not yet added)
+  auth.js          requireAuth, requireRole                   (P1)
+  rateLimit.js     guest comment limit                        (P3)
 models/            user | article | comment | viewEvent
 controllers/       one per resource
 routes/            one per resource, mounted under /api in routes/index.js

@@ -5,6 +5,9 @@ import { loadUser } from './middleware/auth.js';
 import { asyncHandler } from './lib/asyncHandler.js';
 import { notFound, errorHandler } from './middleware/error.js';
 
+import cookieParser from 'cookie-parser';
+import { assignDeviceId } from './middleware/rateLimit.js';
+
 /**
  * Build the Express app WITHOUT starting a listener or opening a DB connection,
  * so tests can exercise it directly (supertest) and server.js owns the wiring.
@@ -13,6 +16,8 @@ export function createApp() {
   const app = express();
 
   app.use(express.json());
+  app.use(cookieParser());
+  app.use(assignDeviceId);
 
   app.use(sessionMiddleware());
   app.use(asyncHandler(loadUser));
