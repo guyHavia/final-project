@@ -1,34 +1,35 @@
-const { describe, it, before, after, beforeEach } = require('node:test');
-const assert = require('node:assert/strict');
-const mongoose = require('mongoose');
-const { MongoMemoryServer } = require('mongodb-memory-server');
-const Comment = require('../models/comment.model');
-const Article = require('../models/article.model');
+import { describe, it, before, after, beforeEach } from 'node:test';
+import assert from 'node:assert/strict';
+import mongoose from 'mongoose';
+
+import { startMongo } from './support/mongo.js';
+import { Comment } from '../models/comment.model.js';
+import { Article } from '../models/article.model.js';
 
 describe('Comment Model (P3-01)', () => {
-  let mongoServer;
+  let stopMongo;
   let sampleArticleId;
 
   before(async () => {
-    mongoServer = await MongoMemoryServer.create();
-    await mongoose.connect(mongoServer.getUri());
+    stopMongo = await startMongo();
   });
 
   after(async () => {
-    await mongoose.disconnect();
-    await mongoServer.stop();
+    await stopMongo();
   });
 
   beforeEach(async () => {
     await Comment.deleteMany({});
     await Article.deleteMany({});
 
-    // Create a mock published article for testing references
+    // A published article to attach comments to (valid against the Article schema).
     const article = await Article.create({
       title: 'Test Article',
-      slug: 'test-article',
       body: 'Content of test article...',
-      state: 'published',
+      category: 'politics',
+      author: new mongoose.Types.ObjectId(),
+      state: 'Published',
+      firstPublishedAt: new Date(),
     });
     sampleArticleId = article._id;
   });
@@ -62,35 +63,19 @@ describe('Comment Model (P3-01)', () => {
   });
 
   it('should enforce validation rules for authorName and body lengths', async () => {
-    // Blank authorName
-    await assert.rejects(async () => {
-      await Comment.create({
-        article: sampleArticleId,
-        authorName: '',
-        body: 'Valid body',
-        deviceId: 'device-1',
-      });
-    }, /ValidationError/);
-
-    // Over-long authorName (> 60 chars)
-    await assert.rejects(async () => {
-      await Comment.create({
-        article: sampleArticleId,
-        authorName: 'a'.repeat(61),
-        body: 'Valid body',
-        deviceId: 'device-1',
-      });
-    }, /ValidationError/);
-
-    // Over-long body (> 2000 chars)
-    await assert.rejects(async () => {
-      await Comment.create({
+    const attempt = (fields) =>
+      Comment.create({
         article: sampleArticleId,
         authorName: 'Dana',
-        body: 'a'.repeat(2001),
+        body: 'Valid body',
         deviceId: 'device-1',
+        ...fields,
       });
-    }, /ValidationError/);
+
+    await assert.rejects(attempt({ authorName: '' }), { name: 'ValidationError' });
+    await assert.rejects(attempt({ authorName: 'a'.repeat(61) }), { name: 'ValidationError' });
+    await assert.rejects(attempt({ body: '   ' }), { name: 'ValidationError' });
+    await assert.rejects(attempt({ body: 'a'.repeat(2001) }), { name: 'ValidationError' });
   });
 
   it('should make createdAt immutable', async () => {
@@ -100,11 +85,13 @@ describe('Comment Model (P3-01)', () => {
       body: 'Immutability test',
       deviceId: 'device-1',
     });
+    const original = comment.createdAt.getTime();
 
+    // Mongoose ignores writes to an immutable path on an existing document.
     comment.createdAt = new Date(2020, 0, 1);
-    
-    await assert.rejects(async () => {
-      await comment.save();
-    });
+    await comment.save();
+
+    const reloaded = await Comment.findById(comment._id);
+    assert.equal(reloaded.createdAt.getTime(), original);
   });
 });

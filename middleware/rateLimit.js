@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import AppError from '../lib/AppError.js';
+import { AppError } from '../lib/AppError.js';
 
 /**
  * Middleware to ensure a deviceId cookie exists.

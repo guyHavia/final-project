@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { sendData } from '../lib/respond.js';
 import { authRoutes } from './auth.routes.js';
 import { statsRoutes } from './stats.routes.js';
+import commentRoutes from './comment.routes.js';
 
 export const apiRouter = Router();
 
@@ -13,6 +14,9 @@ apiRouter.use('/auth', authRoutes);
 // P1-07: stats.routes.js defines GET /:id/stats, so this serves
 // GET /api/articles/:id/stats. P2's full articles router will mount here too.
 apiRouter.use('/articles', statsRoutes);
+// P3: comment.routes.js declares full paths (`/articles/:articleId/comments`,
+// `/comments/:id`), so it mounts at the API root.
+apiRouter.use(commentRoutes);
 
 // Resource routers mount here as they land:
 //   apiRouter.use('/users', userRouter);       // P5

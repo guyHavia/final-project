@@ -4,7 +4,7 @@ import express from 'express';
 import request from 'supertest';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
-import cookieParser from 'cookie-parser';
+import { parseCookies } from '../middleware/cookies.js';
 
 import commentRoutes from '../routes/comment.routes.js';
 import { Article } from '../models/article.model.js';
@@ -15,6 +15,7 @@ let mongoServer;
 let app;
 let publishedArticle;
 let draftArticle;
+let revisionArticle;
 
 // Minimal mock of P1's session/RBAC middleware for testing delete roles
 function mockSession(req, res, next) {
@@ -31,7 +32,7 @@ test.before(async () => {
 
     app = express();
     app.use(express.json());
-    app.use(cookieParser());
+    app.use(parseCookies);
     app.use(mockSession);
     
     // Mount router exactly as expected centrally at /api
@@ -64,6 +65,15 @@ test.before(async () => {
         category: 'politics',
         author: new mongoose.Types.ObjectId(),
         state: 'In Preparation'
+    });
+
+    // Published once, now with a revision waiting for the editor: still public.
+    revisionArticle = await Article.create({
+        title: 'Revised News',
+        category: 'politics',
+        author: new mongoose.Types.ObjectId(),
+        state: 'Pending Editor Approval',
+        firstPublishedAt: new Date()
     });
 });
 
@@ -184,4 +194,63 @@ test('HTTP Delete: Restricts access by role and deletes target', async () => {
 
     // Unknown ID
     await request(app).delete(`/api/comments/${comment._id}`).set('x-mock-role', 'editor').expect(404);
+});
+test('HTTP Create & List: an article with a pending revision stays open for comments', async () => {
+    const created = await request(app)
+        .post(`/api/articles/${revisionArticle._id}/comments`)
+        .send({ authorName: 'Dana', body: 'Still readable while under review' });
+    assert.equal(created.status, 201);
+
+    const list = await request(app).get(`/api/articles/${revisionArticle._id}/comments`);
+    assert.equal(list.status, 200);
+    assert.equal(list.body.data.items.length, 1);
+});
+
+test('HTTP List: q is matched literally, so regex characters never cause a server error', async () => {
+    await Comment.create([
+        { article: publishedArticle._id, authorName: 'A', body: 'Price (in USD) went up', deviceId: '1' },
+        { article: publishedArticle._id, authorName: 'B', body: 'No brackets here', deviceId: '1' }
+    ]);
+
+    for (const q of ['(', '[', '*', '(in USD)']) {
+        const res = await request(app).get(`/api/articles/${publishedArticle._id}/comments?q=${encodeURIComponent(q)}`);
+        assert.equal(res.status, 200, `q=${q} must not error`);
+    }
+    const match = await request(app).get(`/api/articles/${publishedArticle._id}/comments?q=${encodeURIComponent('(in usd)')}`);
+    assert.deepEqual(match.body.data.items.map((c) => c.authorName), ['A']);
+
+    const none = await request(app).get(`/api/articles/${publishedArticle._id}/comments?q=.*`);
+    assert.deepEqual(none.body.data.items, []);
+});
+
+test('HTTP List: comments posted in the same millisecond are never skipped or repeated across pages', async () => {
+    const sameInstant = new Date('2025-05-05T10:00:00.000Z');
+    await Comment.create(
+        Array.from({ length: 7 }, (_, i) => ({
+            article: publishedArticle._id,
+            authorName: `N${i}`,
+            body: `Comment ${i}`,
+            deviceId: '1',
+            createdAt: sameInstant
+        }))
+    );
+
+    const seen = [];
+    let cursor = null;
+    do {
+        const qs = `limit=2${cursor ? `&cursor=${cursor}` : ''}`;
+        const res = await request(app).get(`/api/articles/${publishedArticle._id}/comments?${qs}`);
+        assert.equal(res.status, 200);
+        seen.push(...res.body.data.items.map((c) => c.id));
+        cursor = res.body.data.nextCursor;
+    } while (cursor);
+
+    assert.equal(seen.length, 7);
+    assert.equal(new Set(seen).size, 7);
+});
+
+test('HTTP List: a malformed cursor is a 400, not a server error', async () => {
+    const res = await request(app).get(`/api/articles/${publishedArticle._id}/comments?cursor=garbage`);
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error.code, 'bad_request');
 });
