@@ -1,0 +1,23 @@
+# Spins up a local MongoDB instance for development and manual testing.
+# Usage:
+#   docker compose up -d        # start MongoDB in the background
+#   docker compose down         # stop and remove containers
+#   docker compose down -v      # stop and also wipe the data volume
+#
+# The app itself runs on your host machine (npm run dev / npm start).
+# This file only manages the database dependency.
+#
+# Connection string (already the default in .env.example):
+#   MONGODB_URI=mongodb://127.0.0.1:27017/the-daily-web
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

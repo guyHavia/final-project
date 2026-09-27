@@ -4,7 +4,6 @@ import { User, createUser } from '../models/user.model.js';
 import { Article, CATEGORIES } from '../models/article.model.js';
 import { Comment } from '../models/comment.model.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
-import crypto from 'node:crypto';
 
 function randomChoice(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
@@ -22,9 +21,6 @@ async function seed() {
     await connectDb(env.mongoUri);
     console.log('Connected to DB');
 
-    // Securely source the seed password from the environment, or generate a random one
-    const seedPassword = process.env.SEED_PASSWORD || crypto.randomBytes(6).toString('hex');
-
     // Clean existing data
     await User.deleteMany({});
     await Article.deleteMany({});
@@ -35,7 +31,7 @@ async function seed() {
     // Create Editor
     const editor = await createUser({
         username: 'editor',
-        password: seedPassword,
+        password: 'password123',
         role: 'editor',
         displayName: 'The Editor'
     });
@@ -45,7 +41,7 @@ async function seed() {
     for (let i = 1; i <= 5; i++) {
         reporters.push(await createUser({
             username: `reporter${i}`,
-            password: seedPassword,
+            password: 'password123',
             role: 'reporter',
             displayName: `Reporter ${i}`
         }));
@@ -146,7 +142,7 @@ async function seed() {
         await Article.updateOne({ _id: article._id }, { $set: { viewCount: numViews } });
     }
 
-    // Insert comments in batches to prevent payload too large
+    // Insert comments in batches to prevent payload too large (though it's direct to DB)
     await Comment.insertMany(comments);
     
     // Insert view events in chunks
@@ -158,9 +154,9 @@ async function seed() {
     console.log(`Created ${comments.length} comments and ${viewEvents.length} view events.`);
     console.log('---');
     console.log('Seed completed successfully!');
-    console.log('Logins (Save these!):');
-    console.log(`  Editor:   username: editor      password: ${seedPassword}`);
-    console.log(`  Reporter: username: reporter1   password: ${seedPassword}`);
+    console.log('Logins:');
+    console.log('  Editor:   username: editor   password: password123');
+    console.log('  Reporter: username: reporter1 password: password123');
     
     await disconnectDb();
 }

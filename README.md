@@ -5,14 +5,18 @@ for server-rendered pages, Vanilla JS + Ajax on the client.
 
 ## Prerequisites
 
-- Node.js >= 20 (developed on 25)
-- MongoDB — a local `mongod`, or a free MongoDB Atlas cluster
+- Node.js >= 20
+- MongoDB — choose one:
+  - **Docker (recommended):** `docker compose up -d` — starts MongoDB on port 27017 automatically
+  - **MongoDB Atlas:** free cloud cluster, paste the URI into `.env`
+  - **Local install:** MongoDB Community Server running on `127.0.0.1:27017`
 
 ## Setup
 
 ```
 npm install
-cp .env.example .env      # then fill in MONGODB_URI, SESSION_SECRET, WEATHER_API_KEY
+cp .env.example .env      # then fill in SESSION_SECRET and (optionally) WEATHER_API_KEY
+docker compose up -d      # start MongoDB (skip if using Atlas or a local install)
 ```
 
 ## Run
