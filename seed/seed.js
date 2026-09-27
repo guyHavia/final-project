@@ -22,6 +22,9 @@ async function seed() {
     await connectDb(env.mongoUri);
     console.log('Connected to DB');
 
+    // Securely source the seed password from the environment, or generate a random one
+    const seedPassword = process.env.SEED_PASSWORD || crypto.randomBytes(6).toString('hex');
+
     // Clean existing data
     await User.deleteMany({});
     await Article.deleteMany({});
@@ -29,30 +32,23 @@ async function seed() {
     await ViewEvent.deleteMany({});
     console.log('Cleared existing data');
 
-    // We will collect the generated credentials to print at the end
-    const generatedLogins = [];
-
     // Create Editor
-    const editorPass = process.env.SEED_PASSWORD || crypto.randomBytes(6).toString('hex');
     const editor = await createUser({
         username: 'editor',
-        password: editorPass,
+        password: seedPassword,
         role: 'editor',
         displayName: 'The Editor'
     });
-    generatedLogins.push({ username: 'editor', password: editorPass, role: 'Editor' });
 
     // Create Reporters
     const reporters = [];
     for (let i = 1; i <= 5; i++) {
-        const reporterPass = process.env.SEED_PASSWORD || crypto.randomBytes(6).toString('hex');
         reporters.push(await createUser({
             username: `reporter${i}`,
-            password: reporterPass,
+            password: seedPassword,
             role: 'reporter',
             displayName: `Reporter ${i}`
         }));
-        generatedLogins.push({ username: `reporter${i}`, password: reporterPass, role: 'Reporter' });
     }
     console.log('Created users');
 
@@ -163,9 +159,8 @@ async function seed() {
     console.log('---');
     console.log('Seed completed successfully!');
     console.log('Logins (Save these!):');
-    for (const login of generatedLogins) {
-        console.log(`  Role: ${login.role.padEnd(8)} | Username: ${login.username.padEnd(10)} | Password: ${login.password}`);
-    }
+    console.log(`  Editor:   username: editor      password: ${seedPassword}`);
+    console.log(`  Reporter: username: reporter1   password: ${seedPassword}`);
     
     await disconnectDb();
 }

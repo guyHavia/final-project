@@ -5,49 +5,36 @@ for server-rendered pages, Vanilla JS + Ajax on the client.
 
 ## Quick Start
 
-### Option A — Full Docker (recommended, no Node install needed)
+The easiest way to run the project is using Docker Desktop. You don't need Node.js or MongoDB installed on your computer.
 
 ```bash
-# 1. Copy config and fill in SESSION_SECRET (any long random string)
+# 1. Copy the config file
 cp .env.example .env
+#    → Open .env and set SESSION_SECRET to any random string
 
-# 2. Build and start both containers (MongoDB + app) in the background
+# 2. Build and start the app + database in the background
 docker compose up -d --build
 
-# 3. Seed the database (run once inside the app container)
+# 3. Seed the database with demo data (run this once)
 docker compose exec app node seed/seed.js
-#    → login credentials are printed at the end — save them!
+#    → Login credentials will be printed at the end — save them!
 
-# 4. Open the app
+# 4. Open the app in your browser
 #    → http://localhost:3000
 ```
 
-### Option B — Local Node + Docker MongoDB
+### Managing the App
 
 ```bash
-# 1. Install Node dependencies
-npm install
+# Stop the app and database
+docker compose down
 
-# 2. Copy config and fill in SESSION_SECRET
-cp .env.example .env
+# Restart the app
+docker compose restart
 
-# 3. Start only the MongoDB container
-docker compose up -d mongo
-
-# 4. Seed the database
-npm run seed    # → credentials printed at the end
-
-# 5. Start the dev server (auto-restarts on file changes)
-npm run dev     # → http://localhost:3000
+# View live server logs
+docker compose logs -f app
 ```
-
-> [!NOTE]
-> **No Docker at all?** Set `MONGODB_URI` in `.env` to a free [MongoDB Atlas](https://www.mongodb.com/atlas) connection string and skip steps 1/3.
-
-## Prerequisites
-
-- **Option A:** Docker Desktop only
-- **Option B:** Node.js >= 20 + Docker Desktop (or a remote MongoDB)
 
 ## All npm scripts
 
