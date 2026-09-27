@@ -1,0 +1,13 @@
+node_modules
+.env
+*.log
+npm-debug.log*
+.git
+.gitignore
+test/
+seed/
+docs/
+*.md
+.eslintrc.json
+.prettierrc
+.github/

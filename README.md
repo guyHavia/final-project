@@ -3,49 +3,60 @@
 News system — course final project. Node.js + Express, MongoDB + Mongoose, EJS
 for server-rendered pages, Vanilla JS + Ajax on the client.
 
-## Quick Start (5 steps)
+## Quick Start
+
+### Option A — Full Docker (recommended, no Node install needed)
+
+```bash
+# 1. Copy config and fill in SESSION_SECRET (any long random string)
+cp .env.example .env
+
+# 2. Build and start both containers (MongoDB + app) in the background
+docker compose up -d --build
+
+# 3. Seed the database (run once inside the app container)
+docker compose exec app node seed/seed.js
+#    → login credentials are printed at the end — save them!
+
+# 4. Open the app
+#    → http://localhost:3000
+```
+
+### Option B — Local Node + Docker MongoDB
 
 ```bash
 # 1. Install Node dependencies
 npm install
 
-# 2. Create your local config (only needed once)
+# 2. Copy config and fill in SESSION_SECRET
 cp .env.example .env
-#    → open .env and set SESSION_SECRET to any long random string
 
-# 3. Start MongoDB (requires Docker Desktop to be running)
-docker compose up -d
+# 3. Start only the MongoDB container
+docker compose up -d mongo
 
-# 4. Seed the demo database (500 articles, users, comments, view events)
-npm run seed
-#    → credentials are printed at the end — save them!
+# 4. Seed the database
+npm run seed    # → credentials printed at the end
 
 # 5. Start the dev server (auto-restarts on file changes)
-npm run dev
-#    → open http://localhost:3000
+npm run dev     # → http://localhost:3000
 ```
 
 > [!NOTE]
-> **Don't have Docker?** Alternatives for step 3:
-> - Free cloud DB: sign up at [MongoDB Atlas](https://www.mongodb.com/atlas), create a free M0 cluster, paste the connection string into `.env` as `MONGODB_URI=mongodb+srv://...`
-> - Local install: install [MongoDB Community Server](https://www.mongodb.com/try/download/community) — no `.env` change needed.
+> **No Docker at all?** Set `MONGODB_URI` in `.env` to a free [MongoDB Atlas](https://www.mongodb.com/atlas) connection string and skip steps 1/3.
 
 ## Prerequisites
 
-- Node.js >= 20
-- MongoDB — choose one:
-  - **Docker (recommended):** `docker compose up -d` — starts MongoDB on port 27017 automatically
-  - **MongoDB Atlas:** free cloud cluster, paste the URI into `.env`
-  - **Local install:** MongoDB Community Server running on `127.0.0.1:27017`
+- **Option A:** Docker Desktop only
+- **Option B:** Node.js >= 20 + Docker Desktop (or a remote MongoDB)
 
 ## All npm scripts
 
 ```
-npm run dev      # auto-restart on change (node --watch)
-npm start        # plain run
-npm test         # node --test (no DB needed)
+npm run dev      # dev server with auto-restart (no Docker needed if Mongo is up)
+npm start        # plain server start
+npm test         # node --test — no DB required
 npm run lint     # eslint .
-npm run seed     # load demo data — prints login credentials at the end
+npm run seed     # populate demo data and print login credentials
 ```
 
 ## Project structure
