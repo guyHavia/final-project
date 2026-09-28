@@ -117,7 +117,117 @@ P5 reuses `createUser({ username, password, role, displayName })` from
   - `200 → { data: userView }`; `400` if `currentPassword` is missing when
     `password` is given; `401` if `currentPassword` is wrong.
 
-### Articles  — _P2, pending_
+### Articles  — _P2_
+
+**Public** means *has a published version* (`firstPublishedAt` is set), not
+`state === 'Published'`. A Published article whose revision is Pending or
+Returned stays public and keeps showing its last approved version. Public reads
+only ever return the `published` snapshot, never the working copy.
+
+All lists use keyset pagination: pass the previous page's `nextCursor` as
+`cursor`. `nextCursor` is an opaque string, `null` exactly on the last page.
+`limit` defaults to 20 and is clamped to `1..50` (non-numeric → 20). A malformed
+cursor, or a cursor from a different sort, → `400 bad_request`.
+
+Bylines are `author: { id, displayName }`. A deactivated author keeps their
+name (D2); an author whose document is gone shows `"Unknown author"`.
+
+- **`GET /api/articles?q=&category=&sort=&cursor=&limit=`** — public feed, no auth.
+  - `q` — case-insensitive "contains" on the published title (regex characters are literal).
+  - `category` — one of the `CATEGORIES` list, matched on the published category. Unknown → `400`.
+  - `sort` — `date` (default, first publication, newest first) or `popularity`
+    (`viewCount`, highest first). Ties break on `id`. Unknown → `400`.
+  - `200 → { data: { items: [Card], nextCursor } }`.
+  - `Card` = `{ id, slug, title, abstract, image, category, author, publishedAt, updatedAt, viewCount }`.
+    `publishedAt` is the first publication date; `updatedAt` is when the current
+    published version was approved. No `body` — open the article for that.
+  - `state` is ignored for guests and reporters.
+
+- **`GET /api/articles?state=…&q=&category=&cursor=&limit=`** — editor newsroom view.
+  Only when the caller is an **editor** and `state` is sent; without `state` an
+  editor gets the public feed, so the home page never shows drafts.
+  - `state` — one of the four states, or `all`. Unknown → `400`.
+  - `q` / `category` match the **working copy**. Always ordered by `updatedAt` desc; `sort` is ignored.
+  - `200 → { data: { items: [WorkItem], nextCursor } }`.
+  - `WorkItem` = `{ id, slug, state, title, abstract, image, category, author,
+    editorNote, hasPublishedVersion, publishedAt, submittedAt, updatedAt, viewCount }`
+    — working-copy fields. `editorNote` is set only when `state` is
+    `Returned for Corrections`, otherwise `null`. `hasPublishedVersion` marks a
+    revision of an already-public article.
+
+- **`GET /api/articles/mine?state=&cursor=&limit=`** — `requireAuth`; the caller's own articles.
+  - Every state, or one `state` (unknown → `400`). Ordered by `updatedAt` desc.
+  - `200 → { data: { items: [WorkItem], nextCursor } }`; `401` without a session.
+
+- **`GET /api/articles/:id`** — one article.
+  - **Its author, or any editor** → the full document:
+    `{ id, slug, state, title, abstract, body, image, category, author, editorNote,
+    submittedAt, published, firstPublishedAt, history: [{ at, kind, by }],
+    viewCount, createdAt, updatedAt }`. Top-level content fields are the working
+    copy; `published` is the approved snapshot (or `null`) — enough for a diff.
+  - **Anyone else** → the published version only: `Card` plus `body`. `404` if
+    the article was never published (a draft's existence is not revealed).
+  - `400 invalid_id` for a malformed id; `404` for an unknown one.
+  - Does **not** count a view (D10). The article page render does.
+
+#### Writing articles (P2-03) — all `requireAuth` (reporter or editor)
+
+Request bodies may contain **only** `title`, `abstract`, `body`, `image`,
+`category` — all strings. Anything else (`author`, `state`, `published`, …) →
+`400 bad_request`; the author is always the session user. Text is stored as
+typed (plain text — P3 renders it escaped). Limits: title 200, abstract 500,
+body 50,000, image 2,000 characters. `category` must be in `CATEGORIES`.
+`image` must be empty or an `http(s)://` URL.
+
+Who may change an article's working copy: **editors** always; **reporters**
+only their own (`403` otherwise) and not while it is `Pending Editor Approval`
+(`409 conflict`). Editing a Published article changes only the working copy —
+`published` and the public view stay as approved until an editor approves.
+
+- **`POST /api/articles`** — body needs a non-blank `title` and a `category`.
+  - `201 → { data: <full article> }` (same shape as `GET /api/articles/:id` for
+    its author), `state: "In Preparation"`, `slug: null`, `published: null`.
+- **`PATCH /api/articles/:id`** — full edit: at least one field; `title`, if
+  sent, must be non-blank. State never changes.
+  - `200 → { data: <full article> }`.
+- **`PATCH /api/articles/:id/autosave`** — the debounced save behind
+  "work is never lost". Any subset of the fields, **blank values allowed**
+  (a half-written draft), but never invalid ones (unknown field, bad category,
+  unsafe image, over-long text → `400`). State never changes.
+  - `200 → { data: { id, savedAt } }` — `savedAt` is the stored `updatedAt`.
+  - The draft is on the server: reopening the article from any device
+    (`GET /api/articles/:id`) returns it.
+- **`POST /api/articles/:id/submit`** — → `Pending Editor Approval` (owner or
+  editor), via the state machine. Clears `editorNote`, sets `submittedAt`.
+  - `200 → { data: <full article> }`.
+  - `400` if `title`, `body` or `category` is blank; `403` for another
+    reporter's article; `409` if the state can't be submitted (already
+    Pending) or a Published article has no changes.
+
+All four: `401` without a session; `400 invalid_id` for a malformed id; `404`
+for an unknown one.
+
+#### Server-render hook (not an HTTP endpoint) — `getArticleForRender(slugOrId)`
+
+For P3's `GET /article/:slug` EJS page. Import from `services/articleQuery.service.js`.
+
+```js
+import { getArticleForRender } from '../services/articleQuery.service.js';
+
+const article = await getArticleForRender(req.params.slug);
+if (!article) return res.status(404).render('404');
+res.render('article', { article }); // article.body is the full text → SEO
+```
+
+- Returns `Card` plus `body` (the same fields as a public `GET /api/articles/:id`):
+  `{ id, slug, title, abstract, body, image, category, author: { id, displayName },
+  publishedAt, updatedAt, viewCount }`. Dates are `Date` objects (not ISO strings).
+- Looks up by slug, case-insensitively; if no slug matches and the value is a
+  24-character id, looks up by id (D5). When found by id, `article.slug` is the
+  canonical URL to redirect to.
+- Only the published version, never the working copy. `null` for an unknown,
+  malformed, or never-published article. Never throws for bad input.
+- Does **not** count a view: the page controller calls `recordView(article.id)` (P2-08, D10).
 
 ### Comments — _P3_
 

@@ -5,6 +5,7 @@ import { statsRoutes } from './stats.routes.js';
 import { weatherRoutes } from './weather.routes.js';
 import { userRoutes } from './users.routes.js';
 import commentRoutes from './comment.routes.js';
+import { articleRoutes } from './article.routes.js';
 
 export const apiRouter = Router();
 
@@ -13,10 +14,11 @@ apiRouter.get('/health', (req, res) => {
 });
 
 apiRouter.use('/auth', authRoutes);
-// P1-07: stats.routes.js defines GET /:id/stats, so this serves
-// GET /api/articles/:id/stats. P2's full articles router will mount here too.
+// Both routers share `/articles`: articleRoutes serves `/`, `/mine` and `/:id`;
+// statsRoutes serves `/:id/stats` (P1-07). `/:id` matches one path segment only,
+// so the two never collide.
+apiRouter.use('/articles', articleRoutes);
 apiRouter.use('/articles', statsRoutes);
 apiRouter.use('/weather', weatherRoutes);
 apiRouter.use('/users', userRoutes);
 apiRouter.use('/', commentRoutes); // Maps /articles/:articleId/comments and /comments/:id
-
