@@ -11,6 +11,7 @@ import {
   autosaveArticle,
   submitArticle,
 } from '../services/articleAuthoring.service.js';
+import { approveArticle, returnArticle, deleteArticle } from '../services/articleReview.service.js';
 
 /**
  * GET /api/articles — the public feed for everyone. An editor who sends `state`
@@ -59,4 +60,21 @@ export async function autosaveArticleHandler(req, res) {
 /** POST /api/articles/:id/submit — to Pending Editor Approval. */
 export async function submitArticleHandler(req, res) {
   sendData(res, await submitArticle(req.params.id, req.user));
+}
+
+// --- P2-04: editor decisions. Behind `requireRole('editor')`.
+
+/** POST /api/articles/:id/approve — Pending → Published. */
+export async function approveArticleHandler(req, res) {
+  sendData(res, await approveArticle(req.params.id, req.user));
+}
+
+/** POST /api/articles/:id/return — Pending → Returned for Corrections, body `{ note }`. */
+export async function returnArticleHandler(req, res) {
+  sendData(res, await returnArticle(req.params.id, req.user, req.body));
+}
+
+/** DELETE /api/articles/:id — the article plus its comments and view records. */
+export async function deleteArticleHandler(req, res) {
+  sendData(res, await deleteArticle(req.params.id, req.user));
 }
