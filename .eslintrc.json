@@ -14,5 +14,11 @@
   "rules": {
     "no-unused-vars": "warn",
     "no-console": "warn"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["public/**/*.js"],
+      "env": { "browser": true, "node": false }
+    }
+  ]
 }
