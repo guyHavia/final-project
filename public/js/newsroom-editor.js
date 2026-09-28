@@ -23,6 +23,7 @@ const els = {
   returnNote: document.getElementById('return-note'),
   returnButton: document.getElementById('return-button'),
   editButton: document.getElementById('edit-button'),
+  analyticsLink: document.getElementById('analytics-link'),
   deleteButton: document.getElementById('delete-button'),
   actionError: document.getElementById('action-error'),
   editForm: document.getElementById('edit-form'),
@@ -140,6 +141,11 @@ function renderActionBar(article) {
   els.returnButton.hidden = !isPending;
   els.returnNote.value = '';
   els.returnButton.disabled = true;
+
+  els.analyticsLink.hidden = !article.published;
+  if (article.published) {
+    els.analyticsLink.href = `/newsroom/analytics?articleId=${article.id}`;
+  }
 }
 
 function exitEditMode() {
