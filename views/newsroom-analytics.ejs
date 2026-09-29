@@ -8,11 +8,49 @@
 </head>
 <body>
   <!--
-    Thin shell only — P4-05 fills in the article picker and the Chart.js
-    graph, and adds public/js/analytics.js.
+    Thin shell — no article or stats data is rendered server-side (D5). Every
+    value below is filled in by public/js/analytics.js after load.
   -->
-  <main data-screen="newsroom-analytics">
-    <p>Loading…</p>
-  </main>
+  <div data-screen="newsroom-analytics">
+    <header class="newsroom-header">
+      <h1>The Daily Web — Impact Analytics</h1>
+      <div class="header-user">
+        <span id="user-display-name"></span>
+        <a href="/newsroom/review">Newsroom review</a>
+        <button id="logout-button" type="button">Log out</button>
+      </div>
+    </header>
+
+    <main class="analytics-main">
+      <div class="article-picker">
+        <label for="article-search">Article</label>
+        <input id="article-search" type="text" placeholder="Search published articles…" autocomplete="off" />
+        <ul id="article-results" class="search-results"></ul>
+        <p id="selected-article-title" class="selected-title"></p>
+      </div>
+
+      <div class="range-controls">
+        <label for="bucket-select">Bucket</label>
+        <select id="bucket-select">
+          <option value="hour">Hourly</option>
+          <option value="day">Daily</option>
+        </select>
+
+        <label for="range-from">From</label>
+        <input id="range-from" type="datetime-local" />
+
+        <label for="range-to">To</label>
+        <input id="range-to" type="datetime-local" />
+      </div>
+
+      <div id="chart-area" class="chart-area" hidden>
+        <canvas id="views-chart"></canvas>
+      </div>
+      <p id="empty-message" hidden>No views recorded in this range.</p>
+    </main>
+  </div>
+
+  <script src="/vendor/chart.js"></script>
+  <script type="module" src="/js/analytics.js"></script>
 </body>
 </html>

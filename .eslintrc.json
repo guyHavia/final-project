@@ -20,5 +20,6 @@
       "files": ["public/**/*.js"],
       "env": { "browser": true, "node": false }
     }
-  ]
+  ],
+  "ignorePatterns": ["public/vendor/**"]
 }
