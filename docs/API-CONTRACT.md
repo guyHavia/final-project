@@ -170,6 +170,28 @@ name (D2); an author whose document is gone shows `"Unknown author"`.
   - `400 invalid_id` for a malformed id; `404` for an unknown one.
   - Does **not** count a view (D10). The article page render does.
 
+#### Server-render hook (not an HTTP endpoint) — `getArticleForRender(slugOrId)`
+
+For P3's `GET /article/:slug` EJS page. Import from `services/articleQuery.service.js`.
+
+```js
+import { getArticleForRender } from '../services/articleQuery.service.js';
+
+const article = await getArticleForRender(req.params.slug);
+if (!article) return res.status(404).render('404');
+res.render('article', { article }); // article.body is the full text → SEO
+```
+
+- Returns `Card` plus `body` (the same fields as a public `GET /api/articles/:id`):
+  `{ id, slug, title, abstract, body, image, category, author: { id, displayName },
+  publishedAt, updatedAt, viewCount }`. Dates are `Date` objects (not ISO strings).
+- Looks up by slug, case-insensitively; if no slug matches and the value is a
+  24-character id, looks up by id (D5). When found by id, `article.slug` is the
+  canonical URL to redirect to.
+- Only the published version, never the working copy. `null` for an unknown,
+  malformed, or never-published article. Never throws for bad input.
+- Does **not** count a view: the page controller calls `recordView(article.id)` (P2-08, D10).
+
 ### Comments — _P3_
 
 - `GET /api/articles/:articleId/comments?cursor&limit&q` — list one article's comments, newest first. Not rate-limited.
