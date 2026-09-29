@@ -207,6 +207,28 @@ only their own (`403` otherwise) and not while it is `Pending Editor Approval`
 All four: `401` without a session; `400 invalid_id` for a malformed id; `404`
 for an unknown one.
 
+#### Editor decisions (P2-04) — all `requireRole('editor')`
+
+`401` without a session, `403` for a reporter (even on their own article),
+`400 invalid_id` for a malformed id, `404` for an unknown one. Which state
+changes are legal is decided by the state machine; an illegal one is `409`.
+
+- **`POST /api/articles/:id/approve`** — `Pending Editor Approval` → `Published`.
+  Copies the working copy into `published`, bumps `published.version`, sets
+  `slug` and `firstPublishedAt` on the first approval only (a taken slug gets
+  `-2`, `-3`, …), clears `submittedAt`, and appends a `history` marker —
+  `publish` the first time, `update` after — for Impact Analytics.
+  - `200 → { data: <full article> }`. The public view switches to the new version at once.
+- **`POST /api/articles/:id/return`** — body `{ note }` only.
+  `Pending Editor Approval` → `Returned for Corrections`. `note` is required,
+  trimmed, non-blank, at most 1,000 characters (else `400`). It is shown to the
+  reporter as `editorNote` until they resubmit. A returned revision of a
+  Published article keeps its approved version public.
+  - `200 → { data: <full article> }`.
+- **`DELETE /api/articles/:id`** — deletes the article, then its comments and
+  view records (`ViewEvent`s). Any state.
+  - `200 → { data: { ok: true } }`; `404` if already deleted.
+
 #### Server-render hook (not an HTTP endpoint) — `getArticleForRender(slugOrId)`
 
 For P3's `GET /article/:slug` EJS page. Import from `services/articleQuery.service.js`.
