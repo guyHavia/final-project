@@ -11,6 +11,7 @@ The easiest way to run the project is using Docker Desktop. You don't need Node.
 # 1. Copy the config file
 cp .env.example .env
 #    → Open .env and set SESSION_SECRET to any random string
+#    → Running tests only? Use .env.test instead — SESSION_SECRET is already set
 
 # 2. Build and start the app + database in the background
 docker compose up -d --build
@@ -29,6 +30,8 @@ docker compose exec app node seed/seed.js
 # Stop the app and database
 docker compose down
 
+# Restart the app
+docker compose restart (Then seed if needed)
 # Restart the app (Then re-seed if needed)
 docker compose restart
 
