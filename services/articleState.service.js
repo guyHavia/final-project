@@ -65,10 +65,12 @@ function hasRequiredContent(article) {
   return ['title', 'body', 'category'].every((field) => String(article[field] ?? '').trim().length > 0);
 }
 
+/** The content fields copied from the working copy into `published` on approval. */
+export const CONTENT_FIELDS = ['title', 'abstract', 'body', 'image', 'category'];
+
 /** Whether the working copy differs from the currently published snapshot. */
-function workingCopyDiffersFromPublished(article) {
-  const fields = ['title', 'abstract', 'body', 'image', 'category'];
-  return fields.some((field) => article[field] !== article.published?.[field]);
+export function workingCopyDiffersFromPublished(article) {
+  return CONTENT_FIELDS.some((field) => article[field] !== article.published?.[field]);
 }
 
 /**
