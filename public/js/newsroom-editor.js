@@ -37,24 +37,37 @@ const els = {
 };
 
 let currentArticle = null;
+// Each state is its own cursor-paginated query (GET /api/articles?state=...),
+// so "load more" is per group: { items, nextCursor } keyed by state.
+let queueByState = new Map();
 
-async function fetchQueue() {
-  const pages = await Promise.all(STATE_ORDER.map((state) => apiRequest(`/articles?state=${encodeURIComponent(state)}`)));
-  const byState = new Map(STATE_ORDER.map((state, i) => [state, pages[i].items]));
-  return byState;
+async function fetchStatePage(state) {
+  return apiRequest(`/articles?state=${encodeURIComponent(state)}`);
 }
 
 async function loadGroups() {
   els.actionError.hidden = true;
-  const byState = await fetchQueue();
+  const pages = await Promise.all(STATE_ORDER.map(fetchStatePage));
+  queueByState = new Map(STATE_ORDER.map((state, i) => [state, pages[i]]));
+  renderGroups();
+}
 
+async function loadMoreForState(state) {
+  const { items, nextCursor } = queueByState.get(state);
+  const cursor = nextCursor;
+  const next = await apiRequest(`/articles?state=${encodeURIComponent(state)}&cursor=${encodeURIComponent(cursor)}`);
+  queueByState.set(state, { items: items.concat(next.items), nextCursor: next.nextCursor });
+  renderGroups();
+}
+
+function renderGroups() {
   els.groups.innerHTML = '';
   for (const state of STATE_ORDER) {
-    const articles = byState.get(state);
+    const { items: articles, nextCursor } = queueByState.get(state);
     const section = document.createElement('section');
     section.className = 'article-group';
     const heading = document.createElement('h2');
-    heading.textContent = `${STATE_LABELS[state]} (${articles.length})`;
+    heading.textContent = `${STATE_LABELS[state]} (${articles.length}${nextCursor ? '+' : ''})`;
     section.append(heading);
 
     if (articles.length > 0) {
@@ -77,6 +90,16 @@ async function loadGroups() {
       }
       section.append(list);
     }
+
+    if (nextCursor) {
+      const loadMore = document.createElement('button');
+      loadMore.type = 'button';
+      loadMore.className = 'load-more-button';
+      loadMore.textContent = 'Load more';
+      loadMore.addEventListener('click', () => loadMoreForState(state));
+      section.append(loadMore);
+    }
+
     els.groups.append(section);
   }
 }

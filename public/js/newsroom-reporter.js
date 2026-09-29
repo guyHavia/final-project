@@ -37,6 +37,8 @@ const els = {
 
 let currentArticleId = null;
 let indicator = null;
+let myArticles = [];
+let myArticlesCursor = null;
 
 function fieldSnapshot() {
   return {
@@ -74,10 +76,29 @@ function setFormEditable(editable) {
   }
 }
 
+/**
+ * GET /api/articles/mine is one cursor-paginated list across every state (not
+ * per-state), ordered by updatedAt desc — so "load more" fetches the next
+ * page of that single list and re-buckets everything client-side, rather
+ * than paginating each group independently.
+ */
 async function loadGroups() {
-  const { items } = await apiRequest('/articles/mine');
+  const { items, nextCursor } = await apiRequest('/articles/mine');
+  myArticles = items;
+  myArticlesCursor = nextCursor;
+  renderGroups();
+}
+
+async function loadMoreArticles() {
+  const { items, nextCursor } = await apiRequest(`/articles/mine?cursor=${encodeURIComponent(myArticlesCursor)}`);
+  myArticles = myArticles.concat(items);
+  myArticlesCursor = nextCursor;
+  renderGroups();
+}
+
+function renderGroups() {
   const byState = new Map(STATE_ORDER.map((s) => [s, []]));
-  for (const item of items) byState.get(item.state)?.push(item);
+  for (const item of myArticles) byState.get(item.state)?.push(item);
 
   els.groups.innerHTML = '';
   for (const state of STATE_ORDER) {
@@ -111,8 +132,18 @@ async function loadGroups() {
     els.groups.append(section);
   }
 
-  if (items.length === 0) {
+  if (myArticles.length === 0) {
     els.groups.innerHTML = '<p>No articles yet — start your first one.</p>';
+    return;
+  }
+
+  if (myArticlesCursor) {
+    const loadMore = document.createElement('button');
+    loadMore.type = 'button';
+    loadMore.className = 'load-more-button';
+    loadMore.textContent = 'Load more';
+    loadMore.addEventListener('click', loadMoreArticles);
+    els.groups.append(loadMore);
   }
 }
 
