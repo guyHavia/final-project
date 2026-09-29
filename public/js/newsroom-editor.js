@@ -16,6 +16,7 @@ const els = {
   groups: document.getElementById('article-groups'),
   panel: document.getElementById('review-panel'),
   closeButton: document.getElementById('close-review-button'),
+  compareToggle: document.getElementById('compare-toggle'),
   compareFields: document.getElementById('compare-fields'),
   compareBody: document.getElementById('compare-body'),
   actionBar: document.getElementById('action-bar'),
@@ -170,6 +171,8 @@ async function openReview(id) {
   currentArticle = article;
   exitEditMode();
   els.actionError.hidden = true;
+  els.panel.classList.remove('hide-published');
+  els.compareToggle.textContent = 'Show pending only';
   renderCompareFields(article);
   renderCompareBody(article);
   renderActionBar(article);
@@ -242,6 +245,10 @@ function wireStaticControls() {
   });
 
   els.closeButton.addEventListener('click', closeReview);
+  els.compareToggle.addEventListener('click', () => {
+    els.panel.classList.toggle('hide-published');
+    els.compareToggle.textContent = els.panel.classList.contains('hide-published') ? 'Show both' : 'Show pending only';
+  });
   els.approveButton.addEventListener('click', handleApprove);
   els.returnButton.addEventListener('click', handleReturn);
   els.returnNote.addEventListener('input', () => {

@@ -294,3 +294,98 @@ button.danger {
   border-radius: 8px;
   padding: 12px;
 }
+
+/* Comfortable tap targets everywhere, on top of each control's own padding. */
+button,
+.article-row,
+input,
+select,
+a {
+  min-height: 40px;
+}
+
+.compare-header select,
+#login-form input,
+.search-results li button {
+  min-height: 0; /* rules above are for tap targets, not every text control's box height */
+}
+
+#compare-toggle {
+  display: none;
+}
+
+/* Responsive pass: phone and small-tablet widths. */
+@media (max-width: 700px) {
+  .newsroom-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .reporter-main,
+  .editor-main,
+  .analytics-main {
+    padding: 12px;
+  }
+
+  /* Comparison view: stack Published above Pending instead of three cramped columns. */
+  .compare-header {
+    display: none;
+  }
+
+  .compare-row {
+    display: block;
+    padding: 10px 0;
+  }
+
+  .compare-row .compare-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .compare-row .compare-published,
+  .compare-row .compare-pending {
+    display: block;
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+  }
+
+  .compare-row .compare-published::before {
+    content: 'Published: ';
+    font-weight: 600;
+  }
+
+  .compare-row .compare-pending::before {
+    content: 'Pending: ';
+    font-weight: 600;
+  }
+
+  .compare-row .compare-published {
+    background: #f3f4f6;
+  }
+
+  #compare-toggle {
+    display: inline-block;
+  }
+
+  .hide-published .compare-row .compare-published,
+  .hide-published .body-diff .diff-removed {
+    display: none;
+  }
+
+  .chart-area {
+    height: 280px;
+    padding: 8px;
+  }
+
+  .action-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .action-bar textarea {
+    min-width: 0;
+  }
+}
