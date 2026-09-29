@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 /** The four lifecycle states an article can be in. Single source of truth — no parallel booleans. */
-const STATES = ['In Preparation', 'Pending Editor Approval', 'Published', 'Returned for Corrections'];
+export const STATES = ['In Preparation', 'Pending Editor Approval', 'Published', 'Returned for Corrections'];
 
 /**
  * The shared category list (issue #4, P2-01 schema section: "constrained to a
@@ -61,8 +61,8 @@ const articleSchema = new mongoose.Schema(
     // (slugify) is out of scope for this ticket.
     slug: { type: String, unique: true, lowercase: true, trim: true, sparse: true },
     category: { type: String, required: true, trim: true, enum: CATEGORIES },
-    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    state: { type: String, enum: STATES, default: 'In Preparation', required: true, index: true },
+    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    state: { type: String, enum: STATES, default: 'In Preparation', required: true },
 
     // Working copy — what the reporter edits, what autosave writes.
     title: { type: String, required: true },
@@ -82,20 +82,43 @@ const articleSchema = new mongoose.Schema(
     submittedAt: Date,
     history: [historyEntrySchema],
     // Denormalized popularity counter; not wired to anything yet in this ticket.
-    viewCount: { type: Number, default: 0, index: true },
+    viewCount: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
 
-// Reporter's own articles, most-recently-updated first.
-articleSchema.index({ author: 1, updatedAt: -1, _id: -1 });
-// Public feed of published articles, newest first.
-articleSchema.index({ state: 1, firstPublishedAt: -1, _id: -1 });
-// Most-viewed published articles.
-articleSchema.index({ state: 1, viewCount: -1, _id: -1 });
-// Public feed filtered by category, newest first.
-articleSchema.index({ state: 1, category: 1, firstPublishedAt: -1, _id: -1 });
-// Full-text search over titles.
-articleSchema.index({ title: 'text' });
+/**
+ * "Public" means the article has a published version — `firstPublishedAt` is set
+ * on first approval together with `published` and never cleared. That includes a
+ * Published article whose revision is Pending or Returned: its approved version
+ * keeps serving readers. The public-feed indexes are partial on this filter, so
+ * they hold only public articles and every public query must include it.
+ */
+export const PUBLIC_FILTER = { firstPublishedAt: { $type: 'date' } };
+
+// One index per list the app serves. Each ends in `_id` so keyset pagination has
+// a unique tie-break. Named so tests (and explain()) can refer to them.
+
+// Reporter work area: my articles, most recently updated first.
+articleSchema.index({ author: 1, updatedAt: -1, _id: -1 }, { name: 'mine_by_updated' });
+// Editor newsroom: one state, most recently updated first.
+articleSchema.index({ state: 1, updatedAt: -1, _id: -1 }, { name: 'newsroom_by_state' });
+// Editor newsroom: every state, most recently updated first.
+articleSchema.index({ updatedAt: -1, _id: -1 }, { name: 'newsroom_all' });
+// Public feed, newest first (by first publication, so an update doesn't re-sort it).
+articleSchema.index(
+  { firstPublishedAt: -1, _id: -1 },
+  { name: 'public_by_date', partialFilterExpression: PUBLIC_FILTER },
+);
+// Public feed, most viewed first.
+articleSchema.index(
+  { viewCount: -1, _id: -1 },
+  { name: 'public_by_popularity', partialFilterExpression: PUBLIC_FILTER },
+);
+// Public feed filtered by the category readers see, newest first.
+articleSchema.index(
+  { 'published.category': 1, firstPublishedAt: -1, _id: -1 },
+  { name: 'public_by_category_date', partialFilterExpression: PUBLIC_FILTER },
+);
 
 export const Article = mongoose.model('Article', articleSchema);

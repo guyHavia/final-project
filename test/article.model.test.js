@@ -169,15 +169,31 @@ describe('Article model', () => {
     assert.equal(await Article.countDocuments({ _id: doc._id }), 0);
   });
 
-  test('declares the required indexes', () => {
-    const specs = Article.schema.indexes().map(([spec]) => JSON.stringify(spec));
-
-    assert.ok(specs.includes(JSON.stringify({ author: 1, updatedAt: -1, _id: -1 })));
-    assert.ok(specs.includes(JSON.stringify({ state: 1, firstPublishedAt: -1, _id: -1 })));
-    assert.ok(specs.includes(JSON.stringify({ state: 1, viewCount: -1, _id: -1 })));
-    assert.ok(
-      specs.includes(JSON.stringify({ state: 1, category: 1, firstPublishedAt: -1, _id: -1 })),
+  test('declares one index per list the app serves, and no unused ones', () => {
+    const byName = Object.fromEntries(
+      Article.schema.indexes().map(([spec, options]) => [options.name, { spec, options }]),
     );
-    assert.ok(specs.includes(JSON.stringify({ title: 'text' })));
+    const publicOnly = { firstPublishedAt: { $type: 'date' } };
+
+    assert.deepEqual(byName.mine_by_updated.spec, { author: 1, updatedAt: -1, _id: -1 });
+    assert.deepEqual(byName.newsroom_by_state.spec, { state: 1, updatedAt: -1, _id: -1 });
+    assert.deepEqual(byName.newsroom_all.spec, { updatedAt: -1, _id: -1 });
+    assert.deepEqual(byName.public_by_date.spec, { firstPublishedAt: -1, _id: -1 });
+    assert.deepEqual(byName.public_by_popularity.spec, { viewCount: -1, _id: -1 });
+    assert.deepEqual(byName.public_by_category_date.spec, {
+      'published.category': 1,
+      firstPublishedAt: -1,
+      _id: -1,
+    });
+    for (const name of ['public_by_date', 'public_by_popularity', 'public_by_category_date']) {
+      assert.deepEqual(byName[name].options.partialFilterExpression, publicOnly, name);
+    }
+
+    // The six above plus the unique slug index (declared on the field); nothing else.
+    assert.equal(Article.schema.indexes().length, 7);
+    assert.equal(Article.schema.path('slug').options.unique, true);
+    for (const field of ['author', 'state', 'viewCount']) {
+      assert.ok(!Article.schema.path(field).options.index, `${field} must not have a single-field index`);
+    }
   });
 });

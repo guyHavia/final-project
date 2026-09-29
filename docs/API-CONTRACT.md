@@ -117,7 +117,58 @@ P5 reuses `createUser({ username, password, role, displayName })` from
   - `200 → { data: userView }`; `400` if `currentPassword` is missing when
     `password` is given; `401` if `currentPassword` is wrong.
 
-### Articles  — _P2, pending_
+### Articles  — _P2_
+
+**Public** means *has a published version* (`firstPublishedAt` is set), not
+`state === 'Published'`. A Published article whose revision is Pending or
+Returned stays public and keeps showing its last approved version. Public reads
+only ever return the `published` snapshot, never the working copy.
+
+All lists use keyset pagination: pass the previous page's `nextCursor` as
+`cursor`. `nextCursor` is an opaque string, `null` exactly on the last page.
+`limit` defaults to 20 and is clamped to `1..50` (non-numeric → 20). A malformed
+cursor, or a cursor from a different sort, → `400 bad_request`.
+
+Bylines are `author: { id, displayName }`. A deactivated author keeps their
+name (D2); an author whose document is gone shows `"Unknown author"`.
+
+- **`GET /api/articles?q=&category=&sort=&cursor=&limit=`** — public feed, no auth.
+  - `q` — case-insensitive "contains" on the published title (regex characters are literal).
+  - `category` — one of the `CATEGORIES` list, matched on the published category. Unknown → `400`.
+  - `sort` — `date` (default, first publication, newest first) or `popularity`
+    (`viewCount`, highest first). Ties break on `id`. Unknown → `400`.
+  - `200 → { data: { items: [Card], nextCursor } }`.
+  - `Card` = `{ id, slug, title, abstract, image, category, author, publishedAt, updatedAt, viewCount }`.
+    `publishedAt` is the first publication date; `updatedAt` is when the current
+    published version was approved. No `body` — open the article for that.
+  - `state` is ignored for guests and reporters.
+
+- **`GET /api/articles?state=…&q=&category=&cursor=&limit=`** — editor newsroom view.
+  Only when the caller is an **editor** and `state` is sent; without `state` an
+  editor gets the public feed, so the home page never shows drafts.
+  - `state` — one of the four states, or `all`. Unknown → `400`.
+  - `q` / `category` match the **working copy**. Always ordered by `updatedAt` desc; `sort` is ignored.
+  - `200 → { data: { items: [WorkItem], nextCursor } }`.
+  - `WorkItem` = `{ id, slug, state, title, abstract, image, category, author,
+    editorNote, hasPublishedVersion, publishedAt, submittedAt, updatedAt, viewCount }`
+    — working-copy fields. `editorNote` is set only when `state` is
+    `Returned for Corrections`, otherwise `null`. `hasPublishedVersion` marks a
+    revision of an already-public article.
+
+- **`GET /api/articles/mine?state=&cursor=&limit=`** — `requireAuth`; the caller's own articles.
+  - Every state, or one `state` (unknown → `400`). Ordered by `updatedAt` desc.
+  - `200 → { data: { items: [WorkItem], nextCursor } }`; `401` without a session.
+
+- **`GET /api/articles/:id`** — one article.
+  - **Its author, or any editor** → the full document:
+    `{ id, slug, state, title, abstract, body, image, category, author, editorNote,
+    submittedAt, published, firstPublishedAt, history: [{ at, kind, by }],
+    viewCount, createdAt, updatedAt }`. Top-level content fields are the working
+    copy; `published` is the approved snapshot (or `null`) — enough for a diff.
+  - **Anyone else** → the published version only: `Card` plus `body`. `404` if
+    the article was never published (a draft's existence is not revealed).
+  - `400 invalid_id` for a malformed id; `404` for an unknown one.
+  - Does **not** count a view (D10). The article page render does.
 
 ### Comments — _P3_
 
