@@ -3,6 +3,9 @@ import { sendData } from '../lib/respond.js';
 import { authRoutes } from './auth.routes.js';
 import { statsRoutes } from './stats.routes.js';
 import { articleRoutes } from './article.routes.js';
+import { weatherRoutes } from './weather.routes.js';
+import { userRoutes } from './users.routes.js';
+import commentRoutes from './comment.routes.js';
 
 export const apiRouter = Router();
 
@@ -16,6 +19,6 @@ apiRouter.use('/auth', authRoutes);
 // so the two never collide.
 apiRouter.use('/articles', articleRoutes);
 apiRouter.use('/articles', statsRoutes);
-
-// Resource routers mount here as they land:
-//   apiRouter.use('/users', userRouter);       // P5
+apiRouter.use('/weather', weatherRoutes);
+apiRouter.use('/users', userRoutes);
+apiRouter.use('/', commentRoutes); // Maps /articles/:articleId/comments and /comments/:id

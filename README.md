@@ -3,29 +3,48 @@
 News system — course final project. Node.js + Express, MongoDB + Mongoose, EJS
 for server-rendered pages, Vanilla JS + Ajax on the client.
 
-## Prerequisites
+## Quick Start
 
-- Node.js >= 20 (developed on 25)
-- MongoDB — a local `mongod`, or a free MongoDB Atlas cluster
+The easiest way to run the project is using Docker Desktop. You don't need Node.js or MongoDB installed on your computer.
 
-## Setup
+```bash
+# 1. Copy the config file
+cp .env.example .env
+#    → Open .env and set SESSION_SECRET to any random string
+
+# 2. Build and start the app + database in the background
+docker compose up -d --build
+
+# 3. Seed the database with demo data (run this once)
+docker compose exec app node seed/seed.js
+#    → Login credentials will be printed at the end — save them!
+
+# 4. Open the app in your browser
+#    → http://localhost:3000
+```
+
+### Managing the App
+
+```bash
+# Stop the app and database
+docker compose down
+
+# Restart the app
+docker compose restart (Then seed if needed)
+
+# View live server logs
+docker compose logs -f app
+```
+
+## All npm scripts
 
 ```
-npm install
-cp .env.example .env      # then fill in MONGODB_URI, SESSION_SECRET, WEATHER_API_KEY
+npm run dev      # dev server with auto-restart (no Docker needed if Mongo is up)
+npm start        # plain server start
+npm test         # node --test — no DB required
+npm run lint     # eslint .
+npm run seed     # populate demo data and print login credentials
 ```
-
-## Run
-
-```
-npm run dev      # auto-restart on change (node --watch)
-npm start        # plain run
-npm test         # node --test
-npm run seed     # load demo data (500 articles, users, comments, view stats)
-```
-
-`npm run dev` / `npm start` need a reachable MongoDB. `npm test` does not — the
-skeleton tests exercise the Express app without a DB connection.
 
 ## Project structure
 
@@ -35,7 +54,7 @@ app.js             createApp() — Express wiring, no listener/DB (testable)
 config/
   env.js           all process config, read once
   db.js            Mongoose connection
-  session.js       express-session + connect-mongo            (P1, not yet added)
+  session.js       express-session + connect-mongo            (P1)
 lib/
   logger.js        structured JSON logger
   AppError.js      client-safe error with HTTP status + code
@@ -43,8 +62,8 @@ lib/
   respond.js       sendData(res, data) — the { data } success envelope
 middleware/
   error.js         notFound + terminal errorHandler
-  auth.js          requireAuth, requireRole                   (P1, not yet added)
-  rateLimit.js     guest comment limit                        (P3, not yet added)
+  auth.js          requireAuth, requireRole                   (P1)
+  rateLimit.js     guest comment limit                        (P3)
 models/            user | article | comment | viewEvent
 controllers/       one per resource
 routes/            one per resource, mounted under /api in routes/index.js
