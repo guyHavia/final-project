@@ -238,9 +238,11 @@ For P3's `GET /article/:slug` EJS page. Import from `services/articleQuery.servi
 
 ```js
 import { getArticleForRender } from '../services/articleQuery.service.js';
+import { recordArticleView } from '../services/articleViews.service.js';
 
 const article = await getArticleForRender(req.params.slug);
 if (!article) return res.status(404).render('404');
+await recordArticleView(article.id, { viewer: req.user }); // P2-08: count the read
 res.render('article', { article }); // article.body is the full text → SEO
 ```
 
@@ -252,7 +254,21 @@ res.render('article', { article }); // article.body is the full text → SEO
   canonical URL to redirect to.
 - Only the published version, never the working copy. `null` for an unknown,
   malformed, or never-published article. Never throws for bad input.
-- Does **not** count a view: the page controller calls `recordView(article.id)` (P2-08, D10).
+- Does **not** count a view: the page controller calls `recordArticleView` (below).
+
+#### Counting a view (not an HTTP endpoint) — `recordArticleView(articleId, { viewer })`
+
+P2-08. Call it **once per render of the article page**, and nowhere else (D10):
+not from the JSON API, not from the Ajax comment load.
+
+- Records one `ViewEvent` (P1's `recordView` — the Impact Analytics series) and
+  adds 1 to the article's `viewCount` (the `sort=popularity` key). The increment
+  is atomic and does **not** change `updatedAt`.
+- Pass `viewer: req.user`. A logged-in reporter or editor is **not** counted, so
+  the numbers reflect readers. Every reader entry counts, refreshes included.
+- Only public articles (with a published version) are counted.
+- Never throws — a failure is logged and the page still renders. Resolves to
+  `true` when the view was counted, `false` otherwise.
 
 ### Comments — _P3_
 
