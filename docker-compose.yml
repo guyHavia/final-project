@@ -1,0 +1,30 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      # Override MONGODB_URI so the app finds the mongo *service*, not localhost
+      MONGODB_URI: mongodb://mongo:27017/the-daily-web
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
