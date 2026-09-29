@@ -29,8 +29,8 @@ docker compose exec app node seed/seed.js
 # Stop the app and database
 docker compose down
 
-# Restart the app
-docker compose restart (Then seed if needed)
+# Restart the app (Then re-seed if needed)
+docker compose restart
 
 # View live server logs
 docker compose logs -f app
