@@ -170,6 +170,43 @@ name (D2); an author whose document is gone shows `"Unknown author"`.
   - `400 invalid_id` for a malformed id; `404` for an unknown one.
   - Does **not** count a view (D10). The article page render does.
 
+#### Writing articles (P2-03) — all `requireAuth` (reporter or editor)
+
+Request bodies may contain **only** `title`, `abstract`, `body`, `image`,
+`category` — all strings. Anything else (`author`, `state`, `published`, …) →
+`400 bad_request`; the author is always the session user. Text is stored as
+typed (plain text — P3 renders it escaped). Limits: title 200, abstract 500,
+body 50,000, image 2,000 characters. `category` must be in `CATEGORIES`.
+`image` must be empty or an `http(s)://` URL.
+
+Who may change an article's working copy: **editors** always; **reporters**
+only their own (`403` otherwise) and not while it is `Pending Editor Approval`
+(`409 conflict`). Editing a Published article changes only the working copy —
+`published` and the public view stay as approved until an editor approves.
+
+- **`POST /api/articles`** — body needs a non-blank `title` and a `category`.
+  - `201 → { data: <full article> }` (same shape as `GET /api/articles/:id` for
+    its author), `state: "In Preparation"`, `slug: null`, `published: null`.
+- **`PATCH /api/articles/:id`** — full edit: at least one field; `title`, if
+  sent, must be non-blank. State never changes.
+  - `200 → { data: <full article> }`.
+- **`PATCH /api/articles/:id/autosave`** — the debounced save behind
+  "work is never lost". Any subset of the fields, **blank values allowed**
+  (a half-written draft), but never invalid ones (unknown field, bad category,
+  unsafe image, over-long text → `400`). State never changes.
+  - `200 → { data: { id, savedAt } }` — `savedAt` is the stored `updatedAt`.
+  - The draft is on the server: reopening the article from any device
+    (`GET /api/articles/:id`) returns it.
+- **`POST /api/articles/:id/submit`** — → `Pending Editor Approval` (owner or
+  editor), via the state machine. Clears `editorNote`, sets `submittedAt`.
+  - `200 → { data: <full article> }`.
+  - `400` if `title`, `body` or `category` is blank; `403` for another
+    reporter's article; `409` if the state can't be submitted (already
+    Pending) or a Published article has no changes.
+
+All four: `401` without a session; `400 invalid_id` for a malformed id; `404`
+for an unknown one.
+
 #### Server-render hook (not an HTTP endpoint) — `getArticleForRender(slugOrId)`
 
 For P3's `GET /article/:slug` EJS page. Import from `services/articleQuery.service.js`.

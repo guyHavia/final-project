@@ -251,6 +251,15 @@ export async function getArticleForRender(slugOrId) {
   return toPublicArticle(withAuthor);
 }
 
+/**
+ * The full document for its author or an editor, byline resolved. Used by the
+ * write endpoints (P2-03/P2-04) to answer with the same shape as GET /:id.
+ */
+export async function presentFullArticle(doc) {
+  const [withAuthor] = await attachAuthors([doc]);
+  return toFullArticle(withAuthor);
+}
+
 /** The public view of one article: the published version plus its full body. */
 function toPublicArticle(doc) {
   return { ...toPublicCard(doc), body: doc.published.body ?? '' };

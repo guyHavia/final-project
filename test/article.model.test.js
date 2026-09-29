@@ -29,9 +29,11 @@ describe('Article model', () => {
     title: 'A headline',
   });
 
-  test('requires title', () => {
-    const err = new Article({ ...valid(), title: undefined }).validateSync();
-    assert.ok(err.errors.title);
+  test('title is optional at the model level so autosave can store a half-written draft', () => {
+    // A title is still required on create, full edit and submit — enforced by
+    // articleAuthoring.service.js and the state machine, not the schema.
+    const err = new Article({ ...valid(), title: '' }).validateSync();
+    assert.equal(err?.errors?.title, undefined);
   });
 
   test('requires category', () => {

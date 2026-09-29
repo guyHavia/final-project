@@ -5,6 +5,12 @@ import {
   listMine,
   getArticleForViewer,
 } from '../services/articleQuery.service.js';
+import {
+  createArticle,
+  editArticle,
+  autosaveArticle,
+  submitArticle,
+} from '../services/articleAuthoring.service.js';
 
 /**
  * GET /api/articles — the public feed for everyone. An editor who sends `state`
@@ -30,4 +36,27 @@ export async function listMyArticles(req, res) {
 /** GET /api/articles/:id — full document for its author or an editor, published version for everyone else. */
 export async function getArticle(req, res) {
   sendData(res, await getArticleForViewer(req.params.id, req.user));
+}
+
+// --- P2-03: reporter authoring. All behind `requireAuth`; the service enforces
+// ownership and state rules, so the controllers only pass the session user on.
+
+/** POST /api/articles — 201 with the new article (In Preparation). */
+export async function createArticleHandler(req, res) {
+  sendData(res, await createArticle(req.user, req.body), 201);
+}
+
+/** PATCH /api/articles/:id — full edit of the working copy. */
+export async function editArticleHandler(req, res) {
+  sendData(res, await editArticle(req.params.id, req.user, req.body));
+}
+
+/** PATCH /api/articles/:id/autosave — `{ id, savedAt }`. */
+export async function autosaveArticleHandler(req, res) {
+  sendData(res, await autosaveArticle(req.params.id, req.user, req.body));
+}
+
+/** POST /api/articles/:id/submit — to Pending Editor Approval. */
+export async function submitArticleHandler(req, res) {
+  sendData(res, await submitArticle(req.params.id, req.user));
 }
