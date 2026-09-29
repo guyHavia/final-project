@@ -8,12 +8,89 @@
 </head>
 <body>
   <!--
-    Thin shell only — no article data is rendered server-side. P4-03 fills in
-    the grouped article list, the editing form, and the save indicator, and
-    adds public/js/newsroom-reporter.js.
+    Thin shell — no article data is rendered server-side (D5). Every value
+    below is filled in by public/js/newsroom-reporter.js after load.
   -->
-  <main data-screen="newsroom-reporter">
-    <p>Loading your articles…</p>
-  </main>
+  <div data-screen="newsroom-reporter">
+    <header class="newsroom-header">
+      <h1>The Daily Web — Newsroom</h1>
+      <div class="header-user">
+        <span id="user-display-name"></span>
+        <button id="logout-button" type="button">Log out</button>
+      </div>
+    </header>
+
+    <main class="reporter-main">
+      <div class="reporter-toolbar">
+        <button id="new-article-button" type="button">New article</button>
+      </div>
+
+      <form id="new-article-form" hidden>
+        <label for="new-article-title">Title</label>
+        <input id="new-article-title" type="text" required />
+
+        <label for="new-article-category">Category</label>
+        <select id="new-article-category" required>
+          <option value="politics">politics</option>
+          <option value="business">business</option>
+          <option value="technology">technology</option>
+          <option value="science">science</option>
+          <option value="health">health</option>
+          <option value="sports">sports</option>
+          <option value="entertainment">entertainment</option>
+          <option value="world">world</option>
+          <option value="opinion">opinion</option>
+          <option value="culture">culture</option>
+        </select>
+
+        <button type="submit">Create</button>
+        <p id="new-article-error" role="alert" hidden></p>
+      </form>
+
+      <section id="article-groups" aria-label="My articles"></section>
+
+      <section id="article-editor" class="article-editor" hidden>
+        <button id="close-editor-button" type="button">&larr; Back to list</button>
+        <p id="editor-banner" class="banner" hidden></p>
+        <p id="editor-note" class="note" hidden></p>
+
+        <form id="article-form">
+          <label for="field-title">Title</label>
+          <input id="field-title" type="text" />
+
+          <label for="field-category">Category</label>
+          <select id="field-category">
+            <option value="politics">politics</option>
+            <option value="business">business</option>
+            <option value="technology">technology</option>
+            <option value="science">science</option>
+            <option value="health">health</option>
+            <option value="sports">sports</option>
+            <option value="entertainment">entertainment</option>
+            <option value="world">world</option>
+            <option value="opinion">opinion</option>
+            <option value="culture">culture</option>
+          </select>
+
+          <label for="field-abstract">Abstract</label>
+          <textarea id="field-abstract" rows="2"></textarea>
+
+          <label for="field-image">Image URL</label>
+          <input id="field-image" type="text" />
+
+          <label for="field-body">Body</label>
+          <textarea id="field-body" rows="16"></textarea>
+
+          <div class="editor-footer">
+            <span id="save-status" aria-live="polite"></span>
+            <button id="submit-button" type="button">Submit for approval</button>
+          </div>
+          <p id="submit-error" role="alert" hidden></p>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/js/newsroom-reporter.js"></script>
 </body>
 </html>
