@@ -3,6 +3,7 @@ import { Article, CATEGORIES, STATES, PUBLIC_FILTER } from '../models/article.mo
 import { User } from '../models/user.model.js';
 import { AppError } from '../lib/AppError.js';
 import { encodeCursor, decodeCursor } from '../lib/cursor.js';
+import { CONTENT_FIELDS, workingCopyDiffersFromPublished } from './articleState.service.js';
 
 /**
  * Every article read in the system: the public feed, the editor's newsroom view,
@@ -116,12 +117,46 @@ export function buildMineQuery(authorId, { state, cursor } = {}) {
   ]);
 }
 
+/**
+ * `hasUnsubmittedChanges`, computed by MongoDB: a Published article whose working
+ * copy differs from its approved version — edits the reporter has not sent for
+ * review yet. Computed in the query so list pages never load the full bodies.
+ * Mirrors workingCopyDiffersFromPublished() in the state machine.
+ */
+const HAS_UNSUBMITTED_CHANGES = {
+  $and: [
+    { $eq: ['$state', 'Published'] },
+    { $or: CONTENT_FIELDS.map((f) => ({ $ne: [`$${f}`, `$published.${f}`] })) },
+  ],
+};
+
+/** What a list page loads: everything the cards and work items show, no bodies, no history. */
+const LIST_PROJECTION = {
+  slug: 1,
+  state: 1,
+  author: 1,
+  title: 1,
+  abstract: 1,
+  image: 1,
+  category: 1,
+  editorNote: 1,
+  firstPublishedAt: 1,
+  submittedAt: 1,
+  updatedAt: 1,
+  viewCount: 1,
+  'published.title': 1,
+  'published.abstract': 1,
+  'published.image': 1,
+  'published.category': 1,
+  'published.publishedAt': 1,
+  hasUnsubmittedChanges: HAS_UNSUBMITTED_CHANGES,
+};
+
 /** Runs a built query for one page: fetches `limit + 1` to know whether another page exists. */
 async function runPage({ filter, sort, field }, limit) {
-  const docs = await Article.find(filter)
+  const docs = await Article.find(filter, LIST_PROJECTION)
     .sort(sort)
     .limit(limit + 1)
-    .select('-body -published.body -history')
     .lean();
 
   let nextCursor = null;
@@ -177,6 +212,7 @@ function toWorkItem(doc) {
     author: doc.author,
     editorNote: doc.state === 'Returned for Corrections' ? (doc.editorNote ?? null) : null,
     hasPublishedVersion: Boolean(doc.published),
+    hasUnsubmittedChanges: Boolean(doc.hasUnsubmittedChanges),
     publishedAt: doc.firstPublishedAt ?? null,
     submittedAt: doc.submittedAt ?? null,
     updatedAt: doc.updatedAt,
@@ -279,6 +315,7 @@ function toFullArticle(doc) {
     editorNote: doc.editorNote ?? null,
     submittedAt: doc.submittedAt ?? null,
     published: doc.published ?? null,
+    hasUnsubmittedChanges: doc.state === 'Published' && workingCopyDiffersFromPublished(doc),
     firstPublishedAt: doc.firstPublishedAt ?? null,
     history: (doc.history ?? []).map((h) => ({ at: h.at, kind: h.kind, by: h.by ? String(h.by) : null })),
     viewCount: doc.viewCount ?? 0,

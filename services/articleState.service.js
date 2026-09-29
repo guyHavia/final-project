@@ -21,8 +21,16 @@ export function slugify(title) {
     .replace(/^-+|-+$/g, '');
 }
 
-/** Used as the slug base when a title slugifies to '' (e.g. an all-punctuation title). */
+/**
+ * Used as the slug base when a title slugifies to '' (e.g. an all-punctuation or
+ * non-Latin title). Suffixed with the article id when there is one, so these
+ * articles never collide with each other and never exhaust the retry budget.
+ */
 const EMPTY_SLUG_FALLBACK = 'article';
+
+function fallbackSlug(article) {
+  return article._id ? `${EMPTY_SLUG_FALLBACK}-${article._id}` : EMPTY_SLUG_FALLBACK;
+}
 
 /** Mongo/Mongoose duplicate-key error code, raised when a unique index is violated. */
 const DUPLICATE_KEY_CODE = 11000;
@@ -35,7 +43,9 @@ function isReachable(from, to) {
 function isOwnerOrEditor(article, actor) {
   if (!actor) return false;
   if (actor.role === 'editor') return true;
-  return String(article.author) === String(actor.id);
+  // `author` is a bare id, or a User document when the caller used `.populate('author')`.
+  const authorId = article.author?._id ?? article.author;
+  return String(authorId) === String(actor.id);
 }
 
 /** Mirrors the structural + role/ownership guards only — no content/note check. */
@@ -55,10 +65,12 @@ function hasRequiredContent(article) {
   return ['title', 'body', 'category'].every((field) => String(article[field] ?? '').trim().length > 0);
 }
 
+/** The content fields copied from the working copy into `published` on approval. */
+export const CONTENT_FIELDS = ['title', 'abstract', 'body', 'image', 'category'];
+
 /** Whether the working copy differs from the currently published snapshot. */
-function workingCopyDiffersFromPublished(article) {
-  const fields = ['title', 'abstract', 'body', 'image', 'category'];
-  return fields.some((field) => article[field] !== article.published?.[field]);
+export function workingCopyDiffersFromPublished(article) {
+  return CONTENT_FIELDS.some((field) => article[field] !== article.published?.[field]);
 }
 
 /**
@@ -90,6 +102,13 @@ export function applyTransition(article, to, actor, { note } = {}) {
     throw AppError.forbidden();
   }
 
+  // Every submit and every approve needs complete content — including a revision
+  // of a Published article, and an approve after an editor edited during review —
+  // so an empty article can never reach the public.
+  if ((to === 'Pending Editor Approval' || to === 'Published') && !hasRequiredContent(article)) {
+    throw AppError.badRequest('title, body, and category are required');
+  }
+
   if (to === 'Pending Editor Approval') {
     if (from === 'Published') {
       if (!workingCopyDiffersFromPublished(article)) {
@@ -100,9 +119,6 @@ export function applyTransition(article, to, actor, { note } = {}) {
       return article;
     }
 
-    if (!hasRequiredContent(article)) {
-      throw AppError.badRequest('title, body, and category are required');
-    }
     article.submittedAt = new Date();
     article.editorNote = undefined;
     article.state = to;
@@ -127,7 +143,7 @@ export function applyTransition(article, to, actor, { note } = {}) {
     if (!wasAlreadyPublishedBefore) {
       article.firstPublishedAt = now;
       if (!article.slug) {
-        article.slug = slugify(article.title) || EMPTY_SLUG_FALLBACK;
+        article.slug = slugify(article.title) || fallbackSlug(article);
       }
     }
 

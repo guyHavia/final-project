@@ -34,10 +34,11 @@ const commentSchema = new mongoose.Schema({
   timestamps: { createdAt: true, updatedAt: false },
 });
 
-// Compound index to serve newest-first per-article lists efficiently at scale
-commentSchema.index({ article: 1, createdAt: -1 }); 
+// Serves the newest-first per-article list; `_id` is the tie-break for comments
+// posted in the same millisecond, so keyset paging never skips or repeats one.
+commentSchema.index({ article: 1, createdAt: -1, _id: -1 });
 
-// Ensure deviceId is never serialized in API responses[cite: 2]
+// Ensure deviceId is never serialized in API responses
 commentSchema.set('toJSON', {
   transform: (doc, ret) => {
     ret.id = ret._id.toString();

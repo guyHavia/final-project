@@ -290,6 +290,47 @@ describe('articleState.service', () => {
     });
   });
 
+  describe('content guard on every submit and on approve', () => {
+    for (const field of ['title', 'body', 'category']) {
+      test(`shadow submit of a Published article with a blank "${field}" throws badRequest and does not mutate`, () => {
+        const original = makeArticle();
+        const article = makeArticle({
+          state: 'Published',
+          published: publishedFrom(original),
+          firstPublishedAt: new Date('2024-01-01T00:00:00Z'),
+          [field]: '   ',
+        });
+        const before = structuredClone(article);
+        assertAppError(() => applyTransition(article, 'Pending Editor Approval', reporter()), 'bad_request');
+        assert.deepEqual(article, before);
+      });
+
+      test(`approve with a blank "${field}" throws badRequest and does not mutate`, () => {
+        const article = makeArticle({ state: 'Pending Editor Approval', submittedAt: new Date(), [field]: '' });
+        const before = structuredClone(article);
+        assertAppError(() => applyTransition(article, 'Published', editor()), 'bad_request');
+        assert.deepEqual(article, before);
+      });
+    }
+  });
+
+  describe('ownership with a populated author', () => {
+    const populatedAuthor = (id) => ({ _id: id, displayName: 'Rina Reporter' });
+
+    test('the owner can submit when article.author is a populated User object', () => {
+      const article = makeArticle({ author: populatedAuthor('reporter-1') });
+      assert.equal(canTransition(article, 'Pending Editor Approval', reporter('reporter-1')), true);
+      applyTransition(article, 'Pending Editor Approval', reporter('reporter-1'));
+      assert.equal(article.state, 'Pending Editor Approval');
+    });
+
+    test('a different reporter is still forbidden when article.author is populated', () => {
+      const article = makeArticle({ author: populatedAuthor('reporter-1') });
+      assert.equal(canTransition(article, 'Pending Editor Approval', reporter('reporter-2')), false);
+      assertAppError(() => applyTransition(article, 'Pending Editor Approval', reporter('reporter-2')), 'forbidden');
+    });
+  });
+
   describe('canTransition', () => {
     test('true for a representative sample of legal (state, actor) combos', () => {
       assert.equal(
@@ -476,7 +517,7 @@ describe('articleState.service', () => {
       assert.equal(articleC.slug, 'same-headline-3');
     });
 
-    test('two all-punctuation titles (both slugify to \'\') get distinct fallback slugs instead of colliding on \'\'', async () => {
+    test('titles that slugify to \'\' fall back to an id-based slug, so they never collide', async () => {
       const articleA = await makePendingArticle('!!!');
       const articleB = await makePendingArticle('???');
 
@@ -485,8 +526,19 @@ describe('articleState.service', () => {
       publish(articleB);
       await saveWithSlugRetry(articleB);
 
-      assert.equal(articleA.slug, 'article');
-      assert.equal(articleB.slug, 'article-2');
+      assert.equal(articleA.slug, `article-${articleA._id}`);
+      assert.equal(articleB.slug, `article-${articleB._id}`);
+    });
+
+    test('60 non-Latin titles all publish (no retry-limit crash on a shared fallback slug)', async () => {
+      const slugs = new Set();
+      for (let i = 0; i < 60; i += 1) {
+        const article = await makePendingArticle('כותרת בעברית');
+        publish(article);
+        await saveWithSlugRetry(article);
+        slugs.add(article.slug);
+      }
+      assert.equal(slugs.size, 60);
     });
   });
 });

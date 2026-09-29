@@ -150,10 +150,13 @@ name (D2); an author whose document is gone shows `"Unknown author"`.
   - `q` / `category` match the **working copy**. Always ordered by `updatedAt` desc; `sort` is ignored.
   - `200 → { data: { items: [WorkItem], nextCursor } }`.
   - `WorkItem` = `{ id, slug, state, title, abstract, image, category, author,
-    editorNote, hasPublishedVersion, publishedAt, submittedAt, updatedAt, viewCount }`
+    editorNote, hasPublishedVersion, hasUnsubmittedChanges, publishedAt, submittedAt,
+    updatedAt, viewCount }`
     — working-copy fields. `editorNote` is set only when `state` is
     `Returned for Corrections`, otherwise `null`. `hasPublishedVersion` marks a
-    revision of an already-public article.
+    revision of an already-public article. `hasUnsubmittedChanges` is `true` only
+    for a `Published` article whose working copy differs from its approved
+    version — edits not yet sent for review (use it to prompt "Submit changes").
 
 - **`GET /api/articles/mine?state=&cursor=&limit=`** — `requireAuth`; the caller's own articles.
   - Every state, or one `state` (unknown → `400`). Ordered by `updatedAt` desc.
@@ -162,8 +165,8 @@ name (D2); an author whose document is gone shows `"Unknown author"`.
 - **`GET /api/articles/:id`** — one article.
   - **Its author, or any editor** → the full document:
     `{ id, slug, state, title, abstract, body, image, category, author, editorNote,
-    submittedAt, published, firstPublishedAt, history: [{ at, kind, by }],
-    viewCount, createdAt, updatedAt }`. Top-level content fields are the working
+    submittedAt, published, hasUnsubmittedChanges, firstPublishedAt,
+    history: [{ at, kind, by }], viewCount, createdAt, updatedAt }`. Top-level content fields are the working
     copy; `published` is the approved snapshot (or `null`) — enough for a diff.
   - **Anyone else** → the published version only: `Card` plus `body`. `404` if
     the article was never published (a draft's existence is not revealed).
@@ -207,6 +210,28 @@ only their own (`403` otherwise) and not while it is `Pending Editor Approval`
 All four: `401` without a session; `400 invalid_id` for a malformed id; `404`
 for an unknown one.
 
+#### Editor decisions (P2-04) — all `requireRole('editor')`
+
+`401` without a session, `403` for a reporter (even on their own article),
+`400 invalid_id` for a malformed id, `404` for an unknown one. Which state
+changes are legal is decided by the state machine; an illegal one is `409`.
+
+- **`POST /api/articles/:id/approve`** — `Pending Editor Approval` → `Published`.
+  Copies the working copy into `published`, bumps `published.version`, sets
+  `slug` and `firstPublishedAt` on the first approval only (a taken slug gets
+  `-2`, `-3`, …), clears `submittedAt`, and appends a `history` marker —
+  `publish` the first time, `update` after — for Impact Analytics.
+  - `200 → { data: <full article> }`. The public view switches to the new version at once.
+- **`POST /api/articles/:id/return`** — body `{ note }` only.
+  `Pending Editor Approval` → `Returned for Corrections`. `note` is required,
+  trimmed, non-blank, at most 1,000 characters (else `400`). It is shown to the
+  reporter as `editorNote` until they resubmit. A returned revision of a
+  Published article keeps its approved version public.
+  - `200 → { data: <full article> }`.
+- **`DELETE /api/articles/:id`** — deletes the article, then its comments and
+  view records (`ViewEvent`s). Any state.
+  - `200 → { data: { ok: true } }`; `404` if already deleted.
+
 #### Server-render hook (not an HTTP endpoint) — `getArticleForRender(slugOrId)`
 
 For P3's `GET /article/:slug` EJS page. Import from `services/articleQuery.service.js`.
@@ -232,15 +257,16 @@ res.render('article', { article }); // article.body is the full text → SEO
 ### Comments — _P3_
 
 - `GET /api/articles/:articleId/comments?cursor&limit&q` — list one article's comments, newest first. Not rate-limited.
-  - `cursor` — opaque string, optional.
+  - `cursor` — opaque string, optional (the previous page's `nextCursor`). Malformed → `400 bad_request`.
   - `limit` — `1` to `100`, default `20`.
-  - `q` — case-insensitive substring match on `body`, optional.
+  - `q` — case-insensitive substring match on `body`, optional. Matched literally: regex characters such as `(` or `.*` are plain text.
   - `200 → { data: { items: [Comment], nextCursor: "<opaque or null>" } }`.
-    - `items` — comments ordered newest first.
+    - `items` — comments ordered newest first (ties broken by id, so paging never skips or repeats).
     - `nextCursor` — opaque string when more remain, `null` on the last page.
   - `400 { error: { code: "invalid_id" } }` if `:articleId` is not a well-formed 
     ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
-  - `404` if `:articleId` is well-formed but no such article exists or it is not `Published`.
+  - `404` if `:articleId` is well-formed but no such article exists or it has never been published.
+    An article with a pending or returned revision still has a published version, so it stays open.
 
 - `POST /api/articles/:articleId/comments` — create one comment. Guarded by `rateLimit`.
   - Request body: `{ "authorName": "...", "body": "..." }`.
@@ -248,9 +274,11 @@ res.render('article', { article }); // article.body is the full text → SEO
   - `400 { error: { code: "validation" } }` on a missing/blank field or over max length 
     (mapped automatically by `errorHandler`'s `ValidationError` case).
   - `400 { error: { code: "invalid_id" } }` if `:articleId` is not a well-formed ObjectId.
-  - `404` if `:articleId` is well-formed but no such article exists or it is not `Published`.
+  - `404` if `:articleId` is well-formed but no such article exists or it has never been published.
   - `429 { error: { message: "you are posting too fast, wait a moment", code: "rate_limited" } }` 
     if 4th comment from this `deviceId` within 60s; no document is created.
+    `deviceId` is an httpOnly cookie issued on the first request; `app.js` parses
+    the `Cookie` header into `req.cookies` with `cookie-parser`.
 
 - `DELETE /api/comments/:id` — editor-only (`requireRole('editor')`).
   - `200 → { data: { ok: true } }`.
