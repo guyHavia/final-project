@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign in — The Daily Web</title>
+  <link rel="stylesheet" href="/css/newsroom.css" />
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <h1>The Daily Web</h1>
+    <p class="login-subtitle">Newsroom sign-in</p>
+
+    <form id="login-form" novalidate>
+      <label for="username">Username</label>
+      <input id="username" name="username" type="text" autocomplete="username" required />
+
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+
+      <button type="submit">Sign in</button>
+
+      <p id="login-error" role="alert" hidden></p>
+    </form>
+  </main>
+
+  <script type="module" src="/js/login.js"></script>
+</body>
+</html>
