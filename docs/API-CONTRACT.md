@@ -122,15 +122,16 @@ P5 reuses `createUser({ username, password, role, displayName })` from
 ### Comments — _P3_
 
 - `GET /api/articles/:articleId/comments?cursor&limit&q` — list one article's comments, newest first. Not rate-limited.
-  - `cursor` — opaque string, optional.
+  - `cursor` — opaque string, optional (the previous page's `nextCursor`). Malformed → `400 bad_request`.
   - `limit` — `1` to `100`, default `20`.
-  - `q` — case-insensitive substring match on `body`, optional.
+  - `q` — case-insensitive substring match on `body`, optional. Matched literally: regex characters such as `(` or `.*` are plain text.
   - `200 → { data: { items: [Comment], nextCursor: "<opaque or null>" } }`.
-    - `items` — comments ordered newest first.
+    - `items` — comments ordered newest first (ties broken by id, so paging never skips or repeats).
     - `nextCursor` — opaque string when more remain, `null` on the last page.
   - `400 { error: { code: "invalid_id" } }` if `:articleId` is not a well-formed 
     ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
-  - `404` if `:articleId` is well-formed but no such article exists or it is not `Published`.
+  - `404` if `:articleId` is well-formed but no such article exists or it has never been published.
+    An article with a pending or returned revision still has a published version, so it stays open.
 
 - `POST /api/articles/:articleId/comments` — create one comment. Guarded by `rateLimit`.
   - Request body: `{ "authorName": "...", "body": "..." }`.
@@ -138,9 +139,11 @@ P5 reuses `createUser({ username, password, role, displayName })` from
   - `400 { error: { code: "validation" } }` on a missing/blank field or over max length 
     (mapped automatically by `errorHandler`'s `ValidationError` case).
   - `400 { error: { code: "invalid_id" } }` if `:articleId` is not a well-formed ObjectId.
-  - `404` if `:articleId` is well-formed but no such article exists or it is not `Published`.
+  - `404` if `:articleId` is well-formed but no such article exists or it has never been published.
   - `429 { error: { message: "you are posting too fast, wait a moment", code: "rate_limited" } }` 
     if 4th comment from this `deviceId` within 60s; no document is created.
+    `deviceId` is an httpOnly cookie issued on the first request; `app.js` parses
+    the `Cookie` header into `req.cookies` with `cookie-parser`.
 
 - `DELETE /api/comments/:id` — editor-only (`requireRole('editor')`).
   - `200 → { data: { ok: true } }`.
