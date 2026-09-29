@@ -33,7 +33,7 @@ async function seed() {
     const generatedLogins = [];
 
     // Create Editor
-    const editorPass = process.env.SEED_PASSWORD || crypto.randomBytes(6).toString('hex');
+    const editorPass = process.env.SEED_PASSWORD || crypto.randomBytes(8).toString('hex');
     const editor = await createUser({
         username: 'editor',
         password: editorPass,
@@ -45,7 +45,7 @@ async function seed() {
     // Create Reporters
     const reporters = [];
     for (let i = 1; i <= 5; i++) {
-        const reporterPass = process.env.SEED_PASSWORD || crypto.randomBytes(6).toString('hex');
+        const reporterPass = process.env.SEED_PASSWORD || crypto.randomBytes(8).toString('hex');
         reporters.push(await createUser({
             username: `reporter${i}`,
             password: reporterPass,
