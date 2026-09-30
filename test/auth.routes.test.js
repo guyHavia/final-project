@@ -85,7 +85,7 @@ describe('auth routes', () => {
   test('logout destroys the session; a later /me with the same cookie is 401', async () => {
     const cookie = await loginCookie();
 
-    const out = await request(app).post('/api/auth/logout').set('Cookie', cookie);
+    const out = await request(app).post('/api/auth/logout').set('Cookie', cookie).set('Sec-Fetch-Site', 'same-origin');
     assert.equal(out.status, 200);
     assert.deepEqual(out.body.data, { ok: true });
 

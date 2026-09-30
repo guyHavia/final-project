@@ -5,6 +5,8 @@ import { sessionMiddleware } from './config/session.js';
 import { loadUser } from './middleware/auth.js';
 import { asyncHandler } from './lib/asyncHandler.js';
 import { notFound, errorHandler } from './middleware/error.js';
+import { env } from './config/env.js';
+import { securityHeaders, requireSameOrigin } from './middleware/security.js';
 import { newsroomRouter } from './routes/newsroom.routes.js';
 
 import cookieParser from 'cookie-parser';
@@ -17,13 +19,9 @@ import { assignDeviceId } from './middleware/rateLimit.js';
 export function createApp() {
   const app = express();
 
-  // req.ip feeds the comment rate limiter. Untrusted by default (X-Forwarded-For is
-  // ignored, so it can't be forged); behind a reverse proxy set TRUST_PROXY to the
-  // number of proxy hops (e.g. 1) so req.ip is the real client address.
-  if (process.env.TRUST_PROXY) {
-    const hops = Number(process.env.TRUST_PROXY);
-    app.set('trust proxy', Number.isInteger(hops) ? hops : process.env.TRUST_PROXY);
-  }
+  app.disable('x-powered-by');
+  app.set('trust proxy', env.trustProxy);
+  app.use(securityHeaders({ nodeEnv: env.nodeEnv }));
 
   app.use(express.json({ limit: '256kb' }));
   app.use(cookieParser());
@@ -39,7 +37,7 @@ export function createApp() {
   app.use(newsroomRouter); // P4: /login, /newsroom, /newsroom/review, /newsroom/analytics
   // P3 mounts their own page router (/, /article/:slug) here too.
 
-  app.use('/api', apiRouter);
+  app.use('/api', requireSameOrigin(), apiRouter);
 
   app.use(notFound);
   app.use(errorHandler);

@@ -82,7 +82,8 @@ function build(field, clauses, dir = 'desc') {
  * Throws `AppError.badRequest` for an unknown sort/order/category or a bad cursor.
  */
 export function buildPublicFeedQuery({ q, category, sort = 'date', order, cursor } = {}) {
-  const field = PUBLIC_SORTS[sort || 'date'];
+  const key = sort || 'date';
+  const field = Object.hasOwn(PUBLIC_SORTS, key) ? PUBLIC_SORTS[key] : undefined;
   if (!field) throw AppError.badRequest('unknown sort');
   const checkedCategory = checkCategory(category);
   const dir = checkOrder(order);
