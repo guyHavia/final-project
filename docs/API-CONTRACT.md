@@ -99,21 +99,31 @@ P5 reuses `createUser({ username, password, role, displayName })` from
 
 - **`POST /api/users`** — editor-only. Body `{ username, password, role, displayName }`.
   - `201 → { data: userView }`.
-  - `400` on a missing field or `role` outside `reporter|editor`.
+  - Field rules: `username` and `displayName` are non-blank strings (trimmed;
+    max 64 / 100 chars); `role` is `reporter|editor`; `password` is a string of
+    at least 10 characters and at most 72 **bytes** (bcrypt truncates beyond
+    that). Unknown body fields are rejected.
+  - `400` on a missing field, a wrong type, an out-of-range password, an
+    unknown field, or `role` outside `reporter|editor`.
   - `409 { error: { code: "duplicate" } }` if `username` is taken (case-insensitive).
 - **`GET /api/users?q=&cursor=&limit=`** — editor-only. `q` is a case-insensitive
-  substring match on `username`; `limit` defaults to 20 (cap 100); `cursor` is
-  the last `id` from the previous page (keyset).
+  **literal** substring match on `username` (regex characters are escaped; a
+  repeated `q` → `400`); `limit` defaults to 20 (cap 100, non-numeric → 20);
+  `cursor` is the last `id` from the previous page (keyset; malformed → `400`).
   - `200 → { data: { users: [userView], nextCursor: <id|null> } }`.
 - **`GET /api/users/:id`** — editor-only.
-  - `200 → { data: userView }`; `404` if not found.
+  - `200 → { data: userView }`; `404` if not found or the id is malformed.
 - **`PATCH /api/users/:id`** — editor-only. Any subset of
   `{ role, displayName, active, password }`. `password` is re-hashed via the
   model's `setPassword`. Setting `active: false` is the soft-delete path (D2)
   and must also call `destroySessionsForUser(id)` (`config/session.js`, P1-08)
   so the user is logged out everywhere immediately.
-  - `200 → { data: userView }`; `400` on an unknown field or bad `role`; `404` if not found.
-- **`DELETE /api/users/:id`** — editor-only. **Soft-delete** (D2): sets
+  - Same field rules as create; `active` must be a JSON boolean (`"false"` is
+    a `400`). An editor cannot deactivate or demote **themselves** (`403`), and
+    nobody can deactivate or demote the **last active editor** (`409`).
+  - `200 → { data: userView }`; `400` on an unknown field or a wrong type/value; `403` self-lockout; `404` if not found; `409` last active editor.
+- **`DELETE /api/users/:id`** — editor-only. An editor cannot delete
+  themselves (`403`) or the last active editor (`409`). **Soft-delete** (D2): sets
   `active: false`; the byline and `author` refs stay valid. A hard delete is
   allowed **only** when the user has zero articles (coordinate with P2's
   article count). Either path must also call `destroySessionsForUser(id)`
@@ -121,9 +131,12 @@ P5 reuses `createUser({ username, password, role, displayName })` from
   - `200 → { data: { ok: true, deleted: "soft" | "hard" } }`; `404` if not found.
 - **`PATCH /api/users/me`** — any authenticated user, own account only. Body is
   `{ displayName }` and/or `{ password, currentPassword }`; changing the
-  password requires a correct `currentPassword`.
-  - `200 → { data: userView }`; `400` if `currentPassword` is missing when
-    `password` is given; `401` if `currentPassword` is wrong.
+  password requires a correct `currentPassword`. `displayName` and `password`
+  follow the create rules; any other field (`role`, `active`, `username`, …) is
+  rejected.
+  - `200 → { data: userView }`; `400` on an unknown field, a wrong type, a weak
+    `password`, or `currentPassword` missing when `password` is given; `401` if
+    `currentPassword` is wrong.
 
 ### Articles  — _P2_
 
