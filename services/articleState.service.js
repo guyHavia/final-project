@@ -165,6 +165,30 @@ export function applyTransition(article, to, actor, { note } = {}) {
   return article;
 }
 
+/**
+ * Makes the next `save()` of a loaded `article` conditional on it still being in
+ * the state and at the revision (`updatedAt`, bumped by every content write) it
+ * was read at. When another request got there first the save matches nothing
+ * and throws `DocumentNotFoundError`, which `saveTransition` reports as a 409.
+ * Call before `applyTransition`, while the document is still as loaded.
+ */
+export function guardTransition(article) {
+  article.$where = { state: article.state, updatedAt: article.updatedAt };
+}
+
+/** Like `saveWithSlugRetry`, but a lost race (see `guardTransition`) is a 409 conflict. */
+export async function saveTransition(article) {
+  try {
+    return await saveWithSlugRetry(article);
+  } catch (err) {
+    // VersionError: history is a versioned array, so a racing push is rejected that way.
+    if (err?.name === 'DocumentNotFoundError' || err?.name === 'VersionError') {
+      throw AppError.conflict('the article changed, reload it and try again');
+    }
+    throw err;
+  }
+}
+
 /** True for a Mongo/Mongoose duplicate-key error raised specifically by the `slug` unique index. */
 function isSlugConflict(err) {
   if (err?.code !== DUPLICATE_KEY_CODE) return false;

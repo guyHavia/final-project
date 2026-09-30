@@ -2,7 +2,7 @@ import { Article, CATEGORIES, STATE } from '../models/article.model.js';
 import { ROLE } from '../models/user.model.js';
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
-import { applyTransition } from './articleState.service.js';
+import { applyTransition, guardTransition, saveTransition } from './articleState.service.js';
 import { presentFullArticle } from './articleQuery.service.js';
 
 /**
@@ -139,8 +139,9 @@ export async function submitArticle(id, user) {
   const article = await Article.findById(id);
   if (!article) throw AppError.notFound('article not found');
 
+  guardTransition(article);
   applyTransition(article, STATE.PENDING, toActor(user));
-  await article.save();
+  await saveTransition(article);
   logger.info('article.submitted', { articleId: String(article._id), userId: String(user._id) });
   return presentFullArticle(article.toObject());
 }
