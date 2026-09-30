@@ -255,3 +255,38 @@ describe('the full newsroom cycle', () => {
     assert.equal((await read(null, id)).body.data.body, 'Hot: 41°C, a record.');
   });
 });
+
+describe('concurrent transitions (#46)', () => {
+  test('3 concurrent approves: one 200, the rest 409, exactly one history entry', async () => {
+    const pending = await seedPending();
+    const results = await Promise.all([1, 2, 3].map(() => approve('editor1', pending._id)));
+    assert.deepEqual(results.map((r) => r.status).sort(), [200, 409, 409]);
+    const stored = await Article.findById(pending._id).lean();
+    assert.equal(stored.history.length, 1);
+    assert.equal(stored.published.version, 1);
+  });
+
+  test('approve racing return: exactly one wins, the other gets 409', async () => {
+    const pending = await seedPending();
+    const results = await Promise.all([
+      approve('editor1', pending._id),
+      sendBack('editor1', pending._id, { note: 'fix it' }),
+    ]);
+    assert.deepEqual(results.map((r) => r.status).sort(), [200, 409]);
+  });
+
+  test('submit racing autosave: a blanked body never ends up Pending', async () => {
+    const draft = await Article.create({
+      title: 'T', body: 'text', category: 'science', author: users.reporter1._id,
+    });
+    const autosave = () =>
+      as('reporter1', request(app).patch(`/api/articles/${draft._id}/autosave`).send({ body: '' }));
+    const submit = () => as('reporter1', request(app).post(`/api/articles/${draft._id}/submit`).send({}));
+    for (let i = 0; i < 10; i += 1) {
+      await Article.updateOne({ _id: draft._id }, { $set: { body: 'text', state: 'In Preparation' } });
+      await Promise.all([autosave(), submit()]);
+      const stored = await Article.findById(draft._id).lean();
+      assert.ok(!(stored.state === 'Pending Editor Approval' && !stored.body.trim()), `iteration ${i}`);
+    }
+  });
+});

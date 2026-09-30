@@ -207,6 +207,11 @@ only their own (`403` otherwise) and not while it is `Pending Editor Approval`
     reporter's article; `409` if the state can't be submitted (already
     Pending) or a Published article has no changes.
 
+Transitions (submit, approve, return) are conditional on the state and revision
+the request read: if the article changed in between — a concurrent approve, a
+return, or an autosave — the loser gets `409 conflict` and nothing is written.
+Of N concurrent approves exactly one is `200` and adds one `history` marker.
+
 All four: `401` without a session; `400 invalid_id` for a malformed id; `404`
 for an unknown one.
 
