@@ -153,13 +153,18 @@ export async function update(req, res) {
         await requireAnotherActiveEditor(user);
     }
 
+    const roleChanged = role !== undefined && role !== user.role;
     if (role !== undefined) user.role = role;
     if (cleanName !== undefined) user.displayName = cleanName;
     if (active !== undefined) user.active = active;
     if (password !== undefined) await user.setPassword(password);
 
     await user.save();
-    if (deactivating) await destroySessionsForUser(user.id);
+    // Password, role and deactivation changes end the user's sessions so they take
+    // effect now, not at session expiry. Editing your own account keeps this session.
+    if (deactivating || roleChanged || password !== undefined) {
+        await destroySessionsForUser(user.id, { exceptSid: user.id === req.user.id && !deactivating ? req.sessionID : undefined });
+    }
     sendData(res, toUserView(user));
 }
 
@@ -209,5 +214,6 @@ export async function updateMe(req, res) {
     if (cleanName !== undefined) user.displayName = cleanName;
 
     await user.save();
+    if (password !== undefined) await destroySessionsForUser(user.id, { exceptSid: req.sessionID });
     sendData(res, toUserView(user));
 }

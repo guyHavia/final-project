@@ -54,9 +54,14 @@ router.patch('/:id/autosave', requireRole('reporter', 'editor'), asyncHandler(au
 Session is a signed `connect.sid` cookie (httpOnly, `sameSite=lax`, 7-day TTL),
 backed by the `sessions` collection so a login survives a server restart. The
 session stores only `{ id, role }`, snapshotted at login (D4 + ADR 0001).
+Login regenerates the session id (a new `connect.sid` is issued). A password
+change, role change or deactivation destroys that user's sessions (all of them,
+except the caller's own current session when they edit their own account), so
+the change applies on their next request (they get `401` and must log in again).
 
 - `POST /api/auth/login` — body `{ username, password }`.
-  - `200 → { data: { id, username, role, displayName } }` and a `Set-Cookie`.
+  - `200 → { data: { id, username, role, displayName } }` and a `Set-Cookie`
+    carrying a freshly regenerated session id.
   - `400` if `username` or `password` is missing.
   - `401 { error: { message: "invalid credentials", code: "unauthorized" } }`
     for an unknown username, a wrong password, **or** a deactivated account —
@@ -109,7 +114,9 @@ P5 reuses `createUser({ username, password, role, displayName })` from
   `{ role, displayName, active, password }`. `password` is re-hashed via the
   model's `setPassword`. Setting `active: false` is the soft-delete path (D2)
   and must also call `destroySessionsForUser(id)` (`config/session.js`, P1-08)
-  so the user is logged out everywhere immediately.
+  so the user is logged out everywhere immediately. A changed `role` or a new
+  `password` does the same (a no-op `role` does not); when the target is the
+  caller, their current session is kept.
   - Same field rules as create; `active` must be a JSON boolean (`"false"` is
     a `400`). An editor cannot deactivate or demote **themselves** (`403`), and
     nobody can deactivate or demote the **last active editor** (`409`).
@@ -125,7 +132,8 @@ P5 reuses `createUser({ username, password, role, displayName })` from
   `{ displayName }` and/or `{ password, currentPassword }`; changing the
   password requires a correct `currentPassword`. `displayName` and `password`
   follow the create rules; any other field (`role`, `active`, `username`, …) is
-  rejected.
+  rejected. A password change destroys the user's **other** sessions and keeps
+  the current one.
   - `200 → { data: userView }`; `400` on an unknown field, a wrong type, a weak
     `password`, or `currentPassword` missing when `password` is given; `401` if
     `currentPassword` is wrong.

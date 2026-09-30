@@ -86,8 +86,11 @@ export function sessionMiddleware() {
  * once (D2/D4). connect-mongo stores each session's data as a JSON string
  * (its default `stringify: true`), so matching by user id means reading and
  * parsing docs rather than a Mongo-level field query.
+ *
+ * Pass `exceptSid` (the caller's `req.sessionID`) to keep that one session
+ * alive, e.g. when a user changes their own password.
  */
-export async function destroySessionsForUser(userId) {
+export async function destroySessionsForUser(userId, { exceptSid } = {}) {
   const collection = mongoose.connection.db.collection(SESSIONS_COLLECTION);
   const idsToDelete = [];
 
@@ -98,7 +101,7 @@ export async function destroySessionsForUser(userId) {
     } catch {
       continue;
     }
-    if (session?.user?.id === String(userId)) {
+    if (session?.user?.id === String(userId) && doc._id !== exceptSid) {
       idsToDelete.push(doc._id);
     }
   }
