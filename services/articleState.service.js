@@ -1,6 +1,6 @@
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
-import { STATE } from '../models/article.model.js';
+import { STATE, CONTENT_FIELDS } from '../models/article.model.js';
 import { ROLE } from '../models/user.model.js';
 
 /**
@@ -74,23 +74,14 @@ function hasRequiredContent(article) {
   return ['title', 'body', 'category'].every((field) => String(article[field] ?? '').trim().length > 0);
 }
 
-/** The content fields copied from the working copy into `published` on approval. */
-export const CONTENT_FIELDS = ['title', 'abstract', 'body', 'image', 'category'];
-
 /** Whether the working copy differs from the currently published snapshot. */
 export function workingCopyDiffersFromPublished(article) {
   return CONTENT_FIELDS.some((field) => article[field] !== article.published?.[field]);
 }
 
-/**
- * Pure predicate: can `actor` move `article` to `to`, structurally and by role/
- * ownership? Never throws — payload completeness (content/note) is not checked
- * here, only capability.
- */
-export function canTransition(article, to, actor) {
-  if (!article || typeof article.state !== 'string') return false;
-  if (!isReachable(article.state, to)) return false;
-  return actorCanAttempt(article, to, actor);
+/** A session user as the state machine expects an actor. */
+export function toActor(user) {
+  return { id: String(user._id), role: user.role };
 }
 
 /**
@@ -140,11 +131,7 @@ export function applyTransition(article, to, actor, { note } = {}) {
     const nextVersion = (article.published?.version ?? 0) + 1;
 
     article.published = {
-      title: article.title,
-      abstract: article.abstract,
-      body: article.body,
-      image: article.image,
-      category: article.category,
+      ...Object.fromEntries(CONTENT_FIELDS.map((field) => [field, article[field]])),
       publishedAt: now,
       version: nextVersion,
     };

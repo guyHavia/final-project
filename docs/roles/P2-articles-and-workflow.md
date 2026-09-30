@@ -49,7 +49,7 @@ the newsroom UI (P4 consumes your endpoints).
 **You produce:**
 
 - `Article` model + a stable field list (share it the day P2-01 merges — P1, P3, P4, P5 all read it).
-- `articleState` service: `canTransition(article, to, actor)` → boolean; `applyTransition(article, to, actor, { note })` → updated article or throws `AppError`.
+- `articleState` service: `applyTransition(article, to, actor, { note })` → updated article or throws `AppError`.
 - Publish/update history on the article (e.g. `history: [{ at, kind: 'publish' | 'update', by }]`) — P1's stats markers read this. Agree the exact shape with P1 before P1-07.
 - `getArticleForRender(slug)` → `{ ...article, author: { displayName }, ... }` or `null`.
 - `GET /api/articles` query params: `state`, `q` (title), `category`, `sort=date|popularity`, `cursor`, `limit`.

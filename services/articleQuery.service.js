@@ -1,10 +1,10 @@
 import mongoose from 'mongoose';
-import { Article, CATEGORIES, STATE, STATES, PUBLIC_FILTER } from '../models/article.model.js';
+import { Article, CATEGORIES, STATE, STATES, PUBLIC_FILTER, CONTENT_FIELDS } from '../models/article.model.js';
 import { User, ROLE } from '../models/user.model.js';
 import { AppError } from '../lib/AppError.js';
-import { escapeRegex, clampLimit } from '../lib/query.js';
+import { escapeRegex, isObjectId, clampLimit } from '../lib/query.js';
 import { encodeCursor, decodeCursor, DIRECTIONS } from '../lib/cursor.js';
-import { CONTENT_FIELDS, workingCopyDiffersFromPublished } from './articleState.service.js';
+import { workingCopyDiffersFromPublished } from './articleState.service.js';
 
 /**
  * Every article read in the system: the public feed, the editor's newsroom view,
@@ -137,31 +137,36 @@ const HAS_UNSUBMITTED_CHANGES = {
   ],
 };
 
-/** What a list page loads: everything the cards and work items show, no bodies, no history. */
-const LIST_PROJECTION = {
+/** Every content field except the body: lists show the rest, never the full text. */
+const LIST_CONTENT_FIELDS = CONTENT_FIELDS.filter((field) => field !== 'body');
+
+/** What a public feed page loads: the published card fields only — no working copy, no workflow fields. */
+const PUBLIC_PROJECTION = {
+  slug: 1,
+  author: 1,
+  firstPublishedAt: 1,
+  viewCount: 1,
+  ...Object.fromEntries([...LIST_CONTENT_FIELDS, 'publishedAt'].map((f) => [`published.${f}`, 1])),
+};
+
+/** What a newsroom / work-area page loads: the working copy and workflow fields, no bodies, no history. */
+const WORK_PROJECTION = {
   slug: 1,
   state: 1,
   author: 1,
-  title: 1,
-  abstract: 1,
-  image: 1,
-  category: 1,
   editorNote: 1,
   firstPublishedAt: 1,
   submittedAt: 1,
   updatedAt: 1,
   viewCount: 1,
-  'published.title': 1,
-  'published.abstract': 1,
-  'published.image': 1,
-  'published.category': 1,
-  'published.publishedAt': 1,
+  ...Object.fromEntries(LIST_CONTENT_FIELDS.map((f) => [f, 1])),
+  'published.version': 1,
   hasUnsubmittedChanges: HAS_UNSUBMITTED_CHANGES,
 };
 
 /** Runs a built query for one page: fetches `limit + 1` to know whether another page exists. */
-async function runPage({ filter, sort, field, dir }, limit) {
-  const docs = await Article.find(filter, LIST_PROJECTION)
+async function runPage({ filter, sort, field, dir }, limit, projection) {
+  const docs = await Article.find(filter, projection)
     .sort(sort)
     .limit(limit + 1)
     .lean();
@@ -206,16 +211,24 @@ function toPublicCard(doc) {
   };
 }
 
+/** The working copy's content fields; optional ones read `null` when unset, the body `''`. */
+function workingCopy(doc, { withBody = false } = {}) {
+  return {
+    title: doc.title,
+    abstract: doc.abstract ?? null,
+    ...(withBody && { body: doc.body ?? '' }),
+    image: doc.image ?? null,
+    category: doc.category,
+  };
+}
+
 /** Newsroom / work-area list item: the working copy plus workflow fields, no body. */
 function toWorkItem(doc) {
   return {
     id: String(doc._id),
     slug: doc.slug ?? null,
     state: doc.state,
-    title: doc.title,
-    abstract: doc.abstract ?? null,
-    image: doc.image ?? null,
-    category: doc.category,
+    ...workingCopy(doc),
     author: doc.author,
     editorNote: doc.state === STATE.RETURNED ? (doc.editorNote ?? null) : null,
     hasPublishedVersion: Boolean(doc.published),
@@ -228,17 +241,17 @@ function toWorkItem(doc) {
 }
 
 export async function listPublicFeed({ limit, ...params }) {
-  const { docs, nextCursor } = await runPage(buildPublicFeedQuery(params), parseLimit(limit));
+  const { docs, nextCursor } = await runPage(buildPublicFeedQuery(params), parseLimit(limit), PUBLIC_PROJECTION);
   return { items: docs.map(toPublicCard), nextCursor };
 }
 
 export async function listNewsroom({ limit, ...params }) {
-  const { docs, nextCursor } = await runPage(buildNewsroomQuery(params), parseLimit(limit));
+  const { docs, nextCursor } = await runPage(buildNewsroomQuery(params), parseLimit(limit), WORK_PROJECTION);
   return { items: docs.map(toWorkItem), nextCursor };
 }
 
 export async function listMine(authorId, { limit, ...params }) {
-  const { docs, nextCursor } = await runPage(buildMineQuery(authorId, params), parseLimit(limit));
+  const { docs, nextCursor } = await runPage(buildMineQuery(authorId, params), parseLimit(limit), WORK_PROJECTION);
   return { items: docs.map(toWorkItem), nextCursor };
 }
 
@@ -263,8 +276,6 @@ export async function getArticleForViewer(id, viewer) {
   return toPublicArticle(withAuthor);
 }
 
-const OBJECT_ID = /^[0-9a-f]{24}$/i;
-
 /**
  * P2-07 — the server-render hook for P3's `GET /article/:slug` page. Returns one
  * public article with its FULL body (the SEO requirement: the text is in the
@@ -285,7 +296,7 @@ export async function getArticleForRender(slugOrId) {
   if (!key) return null;
 
   let doc = await Article.findOne({ slug: key.toLowerCase(), ...PUBLIC_FILTER }).lean();
-  if (!doc && OBJECT_ID.test(key)) {
+  if (!doc && isObjectId(key)) {
     doc = await Article.findOne({ _id: key, ...PUBLIC_FILTER }).lean();
   }
   if (!doc?.published) return null;
@@ -313,11 +324,7 @@ function toFullArticle(doc) {
     id: String(doc._id),
     slug: doc.slug ?? null,
     state: doc.state,
-    title: doc.title,
-    abstract: doc.abstract ?? null,
-    body: doc.body ?? '',
-    image: doc.image ?? null,
-    category: doc.category,
+    ...workingCopy(doc, { withBody: true }),
     author: doc.author,
     editorNote: doc.editorNote ?? null,
     submittedAt: doc.submittedAt ?? null,

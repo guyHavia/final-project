@@ -3,7 +3,7 @@ import { Comment } from '../models/comment.model.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
-import { applyTransition, saveWithSlugRetry } from './articleState.service.js';
+import { applyTransition, saveWithSlugRetry, toActor } from './articleState.service.js';
 import { presentFullArticle } from './articleQuery.service.js';
 
 /**
@@ -13,10 +13,6 @@ import { presentFullArticle } from './articleQuery.service.js';
  */
 
 const MAX_NOTE_LENGTH = 1000;
-
-function toActor(user) {
-  return { id: String(user._id), role: user.role };
-}
 
 async function loadArticle(id) {
   const article = await Article.findById(id);

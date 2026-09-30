@@ -29,6 +29,14 @@ export const CATEGORIES = [
 ];
 
 /**
+ * The article's editable content and each field's max length. Single source of
+ * truth for what a reporter may write, what approval copies into `published`,
+ * and what "unsubmitted changes" compares.
+ */
+export const CONTENT_LIMITS = { title: 200, abstract: 500, body: 50_000, image: 2_000, category: 50 };
+export const CONTENT_FIELDS = Object.keys(CONTENT_LIMITS);
+
+/**
  * The frozen public snapshot of an article's most recently approved content.
  * Overwritten wholesale on every approval; `version` increments; `publishedAt`
  * is the current published version's time. `null` until the first approval.
