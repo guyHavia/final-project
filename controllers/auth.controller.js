@@ -2,8 +2,8 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { AppError } from '../lib/AppError.js';
 import { sendData } from '../lib/respond.js';
 import { logger } from '../lib/logger.js';
-import { User } from '../models/user.model.js';
-import { loginAttempts, isLockedOut, recordFailedLogin, clearLoginFailures } from '../middleware/loginLockout.js';
+import { User, verifyDummyPassword } from '../models/user.model.js';
+import { loginLimiter } from '../middleware/loginLockout.js';
 
 /** The user fields that are safe to return to a client — never the hash. */
 function publicUser(user) {
@@ -22,22 +22,25 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   const normalizedUsername = String(username).toLowerCase().trim();
-  const now = Date.now();
+  const ip = req.ip ?? 'unknown';
 
-  if (isLockedOut(loginAttempts, normalizedUsername, now)) {
+  // Reserve the attempt synchronously, before any await, so parallel bursts are counted.
+  if (!loginLimiter.reserve(normalizedUsername, ip).allowed) {
     throw AppError.tooManyRequests('too many failed login attempts, try again later');
   }
 
   const user = await User.findOne({ username: normalizedUsername }).select('+passwordHash');
+  const usable = !!user && user.active !== false;
 
   // One message for unknown user, wrong password, or deactivated account — no enumeration.
-  if (!user || user.active === false || !(await user.verifyPassword(password))) {
-    recordFailedLogin(loginAttempts, normalizedUsername, now);
-    logger.warn('auth.login.fail', { username });
+  // Unknown/inactive users still pay for a bcrypt compare so timing doesn't reveal them.
+  const ok = usable ? await user.verifyPassword(password) : await verifyDummyPassword(password);
+  if (!ok) {
+    logger.warn('auth.login.fail', { username: normalizedUsername.slice(0, 64) });
     throw AppError.unauthorized('invalid credentials');
   }
 
-  clearLoginFailures(loginAttempts, normalizedUsername);
+  loginLimiter.succeed(normalizedUsername, ip);
   req.session.user = { id: user.id, role: user.role };
   logger.info('auth.login.success', { userId: user.id });
   sendData(res, publicUser(user));

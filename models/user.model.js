@@ -30,6 +30,16 @@ userSchema.methods.verifyPassword = function verifyPassword(plain) {
   return bcrypt.compare(plain, this.passwordHash);
 };
 
+// A real hash at the production cost, so a login for an unknown/inactive user can
+// pay for the same bcrypt work as a real one (no timing user enumeration).
+const DUMMY_HASH = bcrypt.hashSync('dummy-password-never-matches', BCRYPT_COST);
+
+/** Burn a bcrypt comparison and always resolve `false`. */
+export async function verifyDummyPassword(plain) {
+  await bcrypt.compare(plain, DUMMY_HASH);
+  return false;
+}
+
 export const User = mongoose.model('User', userSchema);
 
 /**

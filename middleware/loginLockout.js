@@ -1,51 +1,104 @@
 /**
- * Login lockout: after `maxAttempts` failed logins for a username within
- * `windowMs`, that username is locked out for `lockoutMs`. Same in-memory
- * Map style as middleware/rateLimit.js's guest comment limiter (D8) — a
- * restart resetting the counters is harmless.
+ * Login throttling, in memory (same style as middleware/rateLimit.js's guest
+ * comment limiter, D8 — a restart resetting the counters is harmless).
+ *
+ * Two independent counters, both checked and bumped by one synchronous
+ * `reserve()` call made BEFORE the async DB lookup + bcrypt, so a parallel
+ * burst cannot slip past the limit:
+ *  - per username: `maxUserAttempts` attempts within `windowMs` lock that
+ *    username for `lockoutMs`;
+ *  - per IP: `maxIpAttempts` attempts within `windowMs` lock that IP, so one
+ *    client can neither spray many usernames nor keep re-locking a victim.
+ *
+ * Stores are capped at `maxEntries` (oldest non-locked entry evicted) and
+ * swept on a timer by `prune()` — never rescanned per request.
  */
 
 export const WINDOW_MS = 15 * 60 * 1000;
-export const MAX_ATTEMPTS = 5;
 export const LOCKOUT_MS = 15 * 60 * 1000;
+export const MAX_USER_ATTEMPTS = 5;
+export const MAX_IP_ATTEMPTS = 20;
+export const MAX_ENTRIES = 10_000;
+export const PRUNE_INTERVAL_MS = 60 * 1000;
 
-/** The shared store used by the real login endpoint. */
-export const loginAttempts = new Map();
-
-export function isLockedOut(store, username, now) {
-  const entry = store.get(username);
-  return !!entry && entry.lockedUntil != null && now < entry.lockedUntil;
-}
-
-export function recordFailedLogin(
-  store,
-  username,
-  now,
+export function createLoginLimiter({
   windowMs = WINDOW_MS,
-  maxAttempts = MAX_ATTEMPTS,
-  lockoutMs = LOCKOUT_MS
-) {
-  const cutoff = now - windowMs;
+  lockoutMs = LOCKOUT_MS,
+  maxUserAttempts = MAX_USER_ATTEMPTS,
+  maxIpAttempts = MAX_IP_ATTEMPTS,
+  maxEntries = MAX_ENTRIES,
+} = {}) {
+  const users = new Map();
+  const ips = new Map();
 
-  // Prune globally so usernames that stop failing don't sit in memory forever.
-  for (const [key, entry] of store.entries()) {
-    const lockedActive = entry.lockedUntil != null && now < entry.lockedUntil;
-    const recent = entry.attempts.filter((t) => t > cutoff);
-    if (!lockedActive && recent.length === 0) {
-      store.delete(key);
-    } else {
-      store.set(key, { attempts: recent, lockedUntil: lockedActive ? entry.lockedUntil : null });
+  const isLocked = (entry, now) => !!entry && entry.lockedUntil != null && now < entry.lockedUntil;
+
+  function evictOne(store, now) {
+    for (const [key, entry] of store) {
+      if (!isLocked(entry, now)) {
+        store.delete(key);
+        return;
+      }
     }
+    store.delete(store.keys().next().value);
   }
 
-  const entry = store.get(username) || { attempts: [], lockedUntil: null };
-  const attempts = entry.attempts.filter((t) => t > cutoff);
-  attempts.push(now);
+  function bump(store, key, max, now) {
+    let entry = store.get(key);
+    if (!entry) {
+      if (store.size >= maxEntries) evictOne(store, now);
+      entry = { attempts: [], lockedUntil: null };
+      store.set(key, entry);
+    }
+    const cutoff = now - windowMs;
+    entry.attempts = entry.attempts.filter((t) => t > cutoff);
+    entry.attempts.push(now);
+    if (entry.attempts.length > max) entry.attempts.shift();
+    if (entry.attempts.length >= max) entry.lockedUntil = now + lockoutMs;
+  }
 
-  const lockedUntil = attempts.length >= maxAttempts ? now + lockoutMs : entry.lockedUntil;
-  store.set(username, { attempts, lockedUntil });
+  return {
+    /** Check both locks and, if free, count this attempt. Synchronous. */
+    reserve(username, ip, now = Date.now()) {
+      if (isLocked(users.get(username), now) || isLocked(ips.get(ip), now)) {
+        return { allowed: false };
+      }
+      bump(users, username, maxUserAttempts, now);
+      bump(ips, ip, maxIpAttempts, now);
+      return { allowed: true };
+    },
+
+    /** Correct password: forget the username's failures, refund the IP's attempt. */
+    succeed(username, ip) {
+      users.delete(username);
+      const entry = ips.get(ip);
+      if (entry) {
+        entry.attempts.pop();
+        if (entry.attempts.length === 0 && entry.lockedUntil == null) ips.delete(ip);
+      }
+    },
+
+    /** Drop expired entries. Called on a timer, not per request. */
+    prune(now = Date.now()) {
+      const cutoff = now - windowMs;
+      for (const store of [users, ips]) {
+        for (const [key, entry] of store) {
+          if (isLocked(entry, now)) continue;
+          if (!entry.attempts.some((t) => t > cutoff)) store.delete(key);
+        }
+      }
+    },
+
+    size: () => ({ users: users.size, ips: ips.size }),
+
+    clear() {
+      users.clear();
+      ips.clear();
+    },
+  };
 }
 
-export function clearLoginFailures(store, username) {
-  store.delete(username);
-}
+/** The shared limiter used by the real login endpoint. */
+export const loginLimiter = createLoginLimiter();
+
+setInterval(() => loginLimiter.prune(), PRUNE_INTERVAL_MS).unref();
