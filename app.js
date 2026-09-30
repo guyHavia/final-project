@@ -17,6 +17,14 @@ import { assignDeviceId } from './middleware/rateLimit.js';
 export function createApp() {
   const app = express();
 
+  // req.ip feeds the comment rate limiter. Untrusted by default (X-Forwarded-For is
+  // ignored, so it can't be forged); behind a reverse proxy set TRUST_PROXY to the
+  // number of proxy hops (e.g. 1) so req.ip is the real client address.
+  if (process.env.TRUST_PROXY) {
+    const hops = Number(process.env.TRUST_PROXY);
+    app.set('trust proxy', Number.isInteger(hops) ? hops : process.env.TRUST_PROXY);
+  }
+
   app.use(express.json({ limit: '256kb' }));
   app.use(cookieParser());
   app.use(assignDeviceId);

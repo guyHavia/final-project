@@ -63,21 +63,32 @@ export async function list(req, res) {
     sendData(res, { items, nextCursor });
 }
 
-export async function create(req, res) {
+/**
+ * Runs before the rate limiter: 404s for a missing/unpublished article and 400s
+ * for an invalid body, so those requests never consume quota. Stashes the valid,
+ * unsaved comment on `req.comment` for `create`.
+ */
+export async function prepare(req, res, next) {
     const { articleId } = req.params;
     const { authorName, body } = req.body;
-    const deviceId = req.cookies?.deviceId;
 
     await checkArticlePublished(articleId);
 
-    const comment = await Comment.create({
+    const comment = new Comment({
         article: articleId,
         authorName,
         body,
-        deviceId
+        deviceId: req.cookies?.deviceId
     });
+    await comment.validate();
 
-    sendData(res, comment, 201);
+    req.comment = comment;
+    next();
+}
+
+export async function create(req, res) {
+    await req.comment.save();
+    sendData(res, req.comment, 201);
 }
 
 export async function remove(req, res) {
