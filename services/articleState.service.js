@@ -14,18 +14,25 @@ const REACHABLE = {
   [STATE.PENDING]: [STATE.PUBLISHED, STATE.RETURNED],
 };
 
-/** Simple placeholder slug: lowercase, trim, dash-run non-alphanumerics, strip edge dashes. */
+/**
+ * Readable unicode slug: NFC-normalised and lowercased, keeps letters, combining
+ * marks and digits of any script (so a Hebrew title stays Hebrew), turns every
+ * other run into one dash, strips edge dashes. URL-safe: only letters, digits and
+ * `-` remain; browsers percent-encode non-ASCII in the path and Express decodes it.
+ * Returns '' when nothing is left (all punctuation) — the caller falls back.
+ */
 export function slugify(title) {
   return String(title ?? '')
+    .normalize('NFC')
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '');
 }
 
 /**
- * Used as the slug base when a title slugifies to '' (e.g. an all-punctuation or
- * non-Latin title). Suffixed with the article id when there is one, so these
+ * Used as the slug base when a title slugifies to '' (an all-punctuation or
+ * symbol-only title). Suffixed with the article id when there is one, so these
  * articles never collide with each other and never exhaust the retry budget.
  */
 const EMPTY_SLUG_FALLBACK = 'article';

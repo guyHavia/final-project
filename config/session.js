@@ -2,6 +2,7 @@ import session from 'express-session';
 import MongoStore from 'connect-mongo';
 import mongoose from 'mongoose';
 import { env } from './env.js';
+import { escapeRegex } from '../lib/query.js';
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const SEVEN_DAYS_S = SEVEN_DAYS_MS / 1000;
@@ -84,8 +85,11 @@ export function sessionMiddleware() {
  * Delete every session document belonging to `userId` from the `sessions`
  * collection, so a deactivated or deleted user is logged out everywhere at
  * once (D2/D4). connect-mongo stores each session's data as a JSON string
- * (its default `stringify: true`), so matching by user id means reading and
- * parsing docs rather than a Mongo-level field query.
+ * (its default `stringify: true`), so there is no field to query. Instead the
+ * `session` string is pre-filtered server-side with a substring match on the
+ * serialised `"id":"<userId>"` (JSON.stringify emits no whitespace), and only
+ * those few candidates are parsed to confirm `session.user.id` — so no false
+ * positive is ever deleted and the whole collection is no longer shipped to Node.
  *
  * Pass `exceptSid` (the caller's `req.sessionID`) to keep that one session
  * alive, e.g. when a user changes their own password.
@@ -93,8 +97,10 @@ export function sessionMiddleware() {
 export async function destroySessionsForUser(userId, { exceptSid } = {}) {
   const collection = mongoose.connection.db.collection(SESSIONS_COLLECTION);
   const idsToDelete = [];
+  const needle = `"id":${JSON.stringify(String(userId))}`;
+  const candidates = { session: { $regex: escapeRegex(needle) } };
 
-  for await (const doc of collection.find({}, { projection: { session: 1 } })) {
+  for await (const doc of collection.find(candidates, { projection: { session: 1 } })) {
     let session;
     try {
       session = JSON.parse(doc.session);
