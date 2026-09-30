@@ -2,7 +2,7 @@ import { asyncHandler } from '../lib/asyncHandler.js';
 import { AppError } from '../lib/AppError.js';
 import { sendData } from '../lib/respond.js';
 import { Article } from '../models/article.model.js';
-import { getSeries } from '../services/stats.service.js';
+import { getSeries, historyMarkers } from '../services/stats.service.js';
 
 const VALID_BUCKETS = ['hour', 'day'];
 const DEFAULT_BUCKET = 'hour';
@@ -36,14 +36,12 @@ export const getArticleStats = asyncHandler(async (req, res) => {
   const bucket = parseBucket(req.query.bucket);
   const { from, to } = parseRange(req.query.from, req.query.to);
 
-  const article = await Article.findById(req.params.id);
+  const article = await Article.findById(req.params.id).select('history');
   if (!article) throw AppError.notFound();
 
   const series = await getSeries({ articleId: article.id, from, to, bucket });
 
-  const markers = [...article.history]
-    .sort((a, b) => a.at - b.at)
-    .map((entry) => ({ t: entry.at.toISOString(), kind: entry.kind }));
+  const markers = historyMarkers(article.history);
 
   sendData(res, { series, markers });
 });

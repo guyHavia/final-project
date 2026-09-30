@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 
 import { startMongo } from './support/mongo.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
-import { getSeries } from '../services/stats.service.js';
+import { getSeries, historyMarkers, MAX_BUCKETS } from '../services/stats.service.js';
 
 let stopMongo;
 
@@ -111,5 +111,45 @@ describe('stats.service getSeries', () => {
 
     assert.equal(series.length, 1);
     assert.equal(series[0].count, 1);
+  });
+});
+
+describe('bucket cap', () => {
+  test('a range yielding more than MAX_BUCKETS rejects with 400 before querying', async () => {
+    await assert.rejects(
+      getSeries({
+        articleId: new mongoose.Types.ObjectId(),
+        from: new Date('2000-01-01T00:00:00.000Z'),
+        to: new Date('2024-06-01T00:00:00.000Z'),
+        bucket: 'hour',
+      }),
+      (err) => err.status === 400 && /range/i.test(err.message),
+    );
+  });
+
+  test('exactly MAX_BUCKETS buckets is allowed', async () => {
+    const from = new Date('2024-01-01T00:00:00.000Z');
+    const to = new Date(from.getTime() + (MAX_BUCKETS - 1) * 60 * 60 * 1000);
+    const series = await getSeries({
+      articleId: new mongoose.Types.ObjectId(),
+      from,
+      to,
+      bucket: 'hour',
+    });
+    assert.equal(series.length, MAX_BUCKETS);
+  });
+});
+
+describe('historyMarkers', () => {
+  test('sorts ascending by at and maps to { t, kind }', () => {
+    const history = [
+      { at: new Date('2024-06-02T00:00:00.000Z'), kind: 'update' },
+      { at: new Date('2024-06-01T00:00:00.000Z'), kind: 'publish' },
+    ];
+    assert.deepEqual(historyMarkers(history), [
+      { t: '2024-06-01T00:00:00.000Z', kind: 'publish' },
+      { t: '2024-06-02T00:00:00.000Z', kind: 'update' },
+    ]);
+    assert.equal(history[0].kind, 'update', 'input not mutated');
   });
 });

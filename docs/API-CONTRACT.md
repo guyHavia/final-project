@@ -316,7 +316,11 @@ not from the JSON API, not from the Ajax comment load.
       `[from, to]` inclusive, ascending, no gaps; a bucket with zero
       `ViewEvent`s still appears with `count: 0`. Bucketing uses Mongo's
       `$dateTrunc` on `ViewEvent.at`; empty buckets are filled in code
-      after the aggregation.
+      after the aggregation. Buckets are **UTC-aligned** (a `day` bucket starts
+      at 00:00 UTC, i.e. 02:00/03:00 Israel time); there is no `tz` param, so
+      clients wanting local days must re-bucket `hour` results themselves.
+    - Range cap — a request spanning more than 2000 buckets (~83 days of
+      `hour`, ~5.5 years of `day`) → `400 { error: { message: "range too large: at most 2000 <bucket> buckets", code: "bad_request" } }`.
     - `markers` — every entry in the article's `history` (not filtered by
       `from`/`to`), mapped to `{ t: entry.at.toISOString(), kind: entry.kind }`
       and sorted ascending by `at`.
@@ -324,3 +328,8 @@ not from the JSON API, not from the Ajax comment load.
   - `400 { error: { code: "invalid_id" } }` if `:id` is not a well-formed
     ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
   - `404` if `:id` is well-formed but no such article exists.
+  - **ViewEvent retention** — raw `ViewEvent` documents (one per view) are kept
+    indefinitely: no TTL index and no pre-aggregation, because Impact Analytics
+    needs full history. Growth is bounded by traffic and served by the
+    `{ article, at }` index. If volume becomes a problem, add rollup
+    collections (hourly counts) rather than expiring events.
