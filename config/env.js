@@ -30,6 +30,7 @@ export function buildEnv(source = process.env) {
     sessionSecret,
     weatherApiKey: source.WEATHER_API_KEY,
     weatherCity: source.WEATHER_CITY ?? 'Tel Aviv,IL',
+    seedPassword: source.SEED_PASSWORD,
   };
 }
 

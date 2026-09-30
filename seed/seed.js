@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- CLI script: stdout is its interface, including the one-time credentials printout (which must not go into structured logs). */
 import { connectDb, disconnectDb } from '../config/db.js';
 import { env } from '../config/env.js';
 import { User, createUser } from '../models/user.model.js';
@@ -33,7 +34,7 @@ async function seed() {
     const generatedLogins = [];
 
     // Create Editor
-    const editorPass = process.env.SEED_PASSWORD || crypto.randomBytes(8).toString('hex');
+    const editorPass = env.seedPassword || crypto.randomBytes(8).toString('hex');
     const editor = await createUser({
         username: 'editor',
         password: editorPass,
@@ -45,7 +46,7 @@ async function seed() {
     // Create Reporters
     const reporters = [];
     for (let i = 1; i <= 5; i++) {
-        const reporterPass = process.env.SEED_PASSWORD || crypto.randomBytes(8).toString('hex');
+        const reporterPass = env.seedPassword || crypto.randomBytes(8).toString('hex');
         reporters.push(await createUser({
             username: `reporter${i}`,
             password: reporterPass,
