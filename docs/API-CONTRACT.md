@@ -292,9 +292,18 @@ not from the JSON API, not from the Ajax comment load.
   - `400 { error: { code: "invalid_id" } }` if `:articleId` is not a well-formed ObjectId.
   - `404` if `:articleId` is well-formed but no such article exists or it has never been published.
   - `429 { error: { message: "you are posting too fast, wait a moment", code: "rate_limited" } }` 
-    if 4th comment from this `deviceId` within 60s; no document is created.
-    `deviceId` is an httpOnly cookie issued on the first request; `app.js` parses
-    the `Cookie` header into `req.cookies` with `cookie-parser`.
+    if this `deviceId` has already posted 3 comments in the last 60s, **or** the
+    client IP (`req.ip`) has already posted 10 in the last 60s; no document is created.
+    The cookie alone is not trusted (it is client-set, so dropping or forging it
+    would reset a per-cookie limit), hence the per-IP cap. The limiter runs after
+    the 400/404 checks above, so rejected posts do not consume quota. `deviceId` is
+    an httpOnly cookie issued on the first request; `app.js` parses the `Cookie`
+    header into `req.cookies` with `cookie-parser`.
+  - `req.ip` is the socket address unless the `TRUST_PROXY` env var is set (number
+    of proxy hops, e.g. `1`); set it when running behind a reverse proxy, otherwise
+    every visitor shares the proxy's IP.
+  - The limiter store is in-memory, capped at 10,000 keys (least-recently-used
+    evicted) and swept for expired entries every 60s.
 
 - `DELETE /api/comments/:id` — editor-only (`requireRole('editor')`).
   - `200 → { data: { ok: true } }`.

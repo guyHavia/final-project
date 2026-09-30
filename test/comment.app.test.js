@@ -7,6 +7,7 @@ import { startMongo } from './support/mongo.js';
 import { createApp } from '../app.js';
 import { Article } from '../models/article.model.js';
 import { Comment } from '../models/comment.model.js';
+import { commentRateLimitStore } from '../routes/comment.routes.js';
 
 /**
  * The comment endpoints through the REAL app (createApp): proves the routes are
@@ -36,6 +37,7 @@ after(async () => {
 
 afterEach(async () => {
   await Comment.deleteMany({});
+  commentRateLimitStore.clear();
 });
 
 const post = (cookie, body = 'Nice piece') => {
@@ -79,7 +81,27 @@ describe('comments in the real app', () => {
     await post(cookie);
     assert.equal((await post(cookie)).status, 429);
 
-    assert.equal((await post()).status, 201, 'a new device starts with a fresh allowance');
+  });
+
+  test('dropping the cookie on every request does not bypass the limit', async () => {
+    const statuses = [];
+    for (let i = 0; i < 15; i++) statuses.push((await post()).status);
+    assert.ok(statuses.includes(429), `expected a 429 in ${statuses.join(',')}`);
+    assert.ok((await Comment.countDocuments({})) < 15);
+  });
+
+  test('invalid and not-found posts do not consume quota', async () => {
+    const cookie = 'deviceId=quota-test';
+    for (let i = 0; i < 5; i++) {
+      assert.equal((await post(cookie, '')).status, 400);
+      const missing = await request(app)
+        .post(`/api/articles/${new mongoose.Types.ObjectId()}/comments`)
+        .set('Cookie', cookie)
+        .send({ authorName: 'Guest', body: 'x' });
+      assert.equal(missing.status, 404);
+    }
+    for (let i = 0; i < 3; i++) assert.equal((await post(cookie)).status, 201);
+    assert.equal((await post(cookie)).status, 429);
   });
 
   test('DELETE /api/comments/:id is mounted and needs an editor', async () => {
