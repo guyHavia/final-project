@@ -72,6 +72,18 @@ describe('destroySessionsForUser', () => {
     assert.equal(whoB.body.data, null);
   });
 
+  test('an id that is a prefix of another (u1 vs u10) or regex-special never over-deletes', async () => {
+    const app = buildApp();
+    const cookieU10 = (await request(app).post('/_login').send({ id: 'u10' })).headers['set-cookie'];
+    const cookieDot = (await request(app).post('/_login').send({ id: 'uXY' })).headers['set-cookie'];
+
+    await destroySessionsForUser('u1');
+    await destroySessionsForUser('u.Y');
+
+    assert.equal((await request(app).get('/_who').set('Cookie', cookieU10)).body.data.id, 'u10');
+    assert.equal((await request(app).get('/_who').set('Cookie', cookieDot)).body.data.id, 'uXY');
+  });
+
   test('a user with no sessions resolves without throwing', async () => {
     await assert.doesNotReject(() => destroySessionsForUser('nobody-logged-in'));
   });

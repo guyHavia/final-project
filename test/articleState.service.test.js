@@ -130,6 +130,12 @@ describe('articleState.service', () => {
       assert.ok(article.slug, 'slug must be a non-empty fallback, not left blank');
     });
 
+    test('Pending Editor Approval -> Published: a Hebrew title gets a readable unicode slug, not article-<id>', () => {
+      const article = makeArticle({ state: 'Pending Editor Approval', title: 'חדשות מהעולם: הבחירות 2025!', submittedAt: new Date() });
+      applyTransition(article, 'Published', editor('editor-1'));
+      assert.equal(article.slug, 'חדשות-מהעולם-הבחירות-2025');
+    });
+
     test('Pending Editor Approval -> Published: a later approval increments version, keeps firstPublishedAt/slug, and pushes "update"', () => {
       const firstPublishedAt = new Date('2024-01-01T00:00:00Z');
       const article = makeArticle({
@@ -384,6 +390,21 @@ describe('articleState.service', () => {
   });
 
   describe('slugify', () => {
+    test('keeps letters and digits of any script, drops punctuation, stays lowercase and dash-separated', () => {
+      assert.equal(slugify('  שלום, עולם!! '), 'שלום-עולם');
+      assert.equal(slugify('Привет Мир'), 'привет-мир');
+      assert.equal(slugify('Über 5 café'), 'über-5-café');
+    });
+
+    test('never emits characters that break a URL path or mongo key', () => {
+      const slug = slugify('a/b?c#d%e\\f g<h>"i');
+      assert.match(slug, /^[\p{L}\p{N}]+(-[\p{L}\p{N}]+)*$/u);
+    });
+
+    test('a title with no letters or digits still slugifies to empty (caller falls back)', () => {
+      assert.equal(slugify('!!! ???'), '');
+    });
+
     test('lowercases, trims, and collapses non-alphanumeric runs to a single dash', () => {
       assert.equal(slugify('  My Great Article!! '), 'my-great-article');
       assert.equal(slugify('Already-slugged'), 'already-slugged');
@@ -530,15 +551,26 @@ describe('articleState.service', () => {
       assert.equal(articleB.slug, `article-${articleB._id}`);
     });
 
-    test('60 non-Latin titles all publish (no retry-limit crash on a shared fallback slug)', async () => {
+    test('60 symbol-only titles all publish (no retry-limit crash on a shared fallback slug)', async () => {
       const slugs = new Set();
       for (let i = 0; i < 60; i += 1) {
-        const article = await makePendingArticle('כותרת בעברית');
+        const article = await makePendingArticle('!!! ???');
         publish(article);
         await saveWithSlugRetry(article);
         slugs.add(article.slug);
       }
       assert.equal(slugs.size, 60);
+    });
+
+    test('same-title Hebrew articles get the readable slug plus the collision suffix', async () => {
+      const articleA = await makePendingArticle('כותרת בעברית');
+      const articleB = await makePendingArticle('כותרת בעברית');
+      for (const article of [articleA, articleB]) {
+        publish(article);
+        await saveWithSlugRetry(article);
+      }
+      assert.equal(articleA.slug, 'כותרת-בעברית');
+      assert.equal(articleB.slug, 'כותרת-בעברית-2');
     });
   });
 });

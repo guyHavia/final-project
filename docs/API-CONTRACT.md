@@ -127,16 +127,30 @@ only ever return the `published` snapshot, never the working copy.
 All lists use keyset pagination: pass the previous page's `nextCursor` as
 `cursor`. `nextCursor` is an opaque string, `null` exactly on the last page.
 `limit` defaults to 20 and is clamped to `1..50` (non-numeric → 20). A malformed
-cursor, or a cursor from a different sort, → `400 bad_request`.
+cursor, or a cursor from a different sort or `order`, → `400 bad_request`.
+
+**Keyset paging caveat.** A cursor is a position (`{ sort value, id, direction }`),
+not a snapshot. Sorts on a value that can change between requests — `popularity`
+(`viewCount`) and the newsroom/mine `updatedAt` — can therefore show an item twice
+or skip one when its value moves while a client is paging (e.g. an article gains
+views, or is edited, after page 1 was served). Within one page and for the stable
+`date` sort (`firstPublishedAt`, set once) results are exact. Clients that need
+uniqueness should de-duplicate by `id`; a fresh first page always reflects the
+current order. This trade-off is accepted in exchange for no `skip`/offset scans.
 
 Bylines are `author: { id, displayName }`. A deactivated author keeps their
 name (D2); an author whose document is gone shows `"Unknown author"`.
 
-- **`GET /api/articles?q=&category=&sort=&cursor=&limit=`** — public feed, no auth.
+- **`GET /api/articles?q=&category=&sort=&order=&cursor=&limit=`** — public feed, no auth.
   - `q` — case-insensitive "contains" on the published title (regex characters are literal).
   - `category` — one of the `CATEGORIES` list, matched on the published category. Unknown → `400`.
   - `sort` — `date` (default, first publication, newest first) or `popularity`
     (`viewCount`, highest first). Ties break on `id`. Unknown → `400`.
+  - `order` — `desc` (default: newest / most viewed first) or `asc` (oldest / least
+    viewed first, ties on `id` ascending). Works with every `sort`. Unknown → `400`.
+    The cursor encodes the direction: keep sending the same `order` with a cursor;
+    a cursor from the other direction → `400`. The newsroom and `mine` lists are
+    always `updatedAt` desc and ignore `order`.
   - `200 → { data: { items: [Card], nextCursor } }`.
   - `Card` = `{ id, slug, title, abstract, image, category, author, publishedAt, updatedAt, viewCount }`.
     `publishedAt` is the first publication date; `updatedAt` is when the current
@@ -218,7 +232,10 @@ changes are legal is decided by the state machine; an illegal one is `409`.
 
 - **`POST /api/articles/:id/approve`** — `Pending Editor Approval` → `Published`.
   Copies the working copy into `published`, bumps `published.version`, sets
-  `slug` and `firstPublishedAt` on the first approval only (a taken slug gets
+  `slug` and `firstPublishedAt` on the first approval only. The slug is the
+  lowercased title with letters/digits of any script kept (a Hebrew title gives
+  `חדשות-מהעולם`, percent-encoded in URLs) and other runs turned into `-`; a title
+  with no letters or digits falls back to `article-<id>` (a taken slug gets
   `-2`, `-3`, …), clears `submittedAt`, and appends a `history` marker —
   `publish` the first time, `update` after — for Impact Analytics.
   - `200 → { data: <full article> }`. The public view switches to the new version at once.
@@ -295,6 +312,15 @@ not from the JSON API, not from the Ajax comment load.
     if 4th comment from this `deviceId` within 60s; no document is created.
     `deviceId` is an httpOnly cookie issued on the first request; `app.js` parses
     the `Cookie` header into `req.cookies` with `cookie-parser`.
+
+- `PATCH /api/comments/:id` — editor-only (`requireRole('editor')`); moderation edit.
+  - Body `{ body }` — the only editable field (`authorName`, `article`, `deviceId`
+    and anything else are ignored). Trimmed, 1..2000 chars like create.
+  - `200 → { data: Comment }` (no `deviceId`); `401` no session; `403` reporter.
+  - `400 validation` for a blank/over-long `body`; `400 bad_request` when `body`
+    is missing or not a string; `400 invalid_id` for a malformed `:id`;
+    `404` if no such comment.
+  - Comments have no edited marker or history; `createdAt` is unchanged.
 
 - `DELETE /api/comments/:id` — editor-only (`requireRole('editor')`).
   - `200 → { data: { ok: true } }`.

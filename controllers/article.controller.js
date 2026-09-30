@@ -19,12 +19,12 @@ import { approveArticle, returnArticle, deleteArticle } from '../services/articl
  * else `state` is ignored, so the feed can never expose unpublished work.
  */
 export async function listArticles(req, res) {
-  const { q, category, sort, cursor, limit, state } = req.query;
+  const { q, category, sort, order, cursor, limit, state } = req.query;
   const wantsNewsroom = req.user?.role === 'editor' && state !== undefined && state !== '';
 
   const page = wantsNewsroom
     ? await listNewsroom({ state, q, category, cursor, limit })
-    : await listPublicFeed({ q, category, sort, cursor, limit });
+    : await listPublicFeed({ q, category, sort, order, cursor, limit });
   sendData(res, page);
 }
 
