@@ -1,21 +1,11 @@
-import { asyncHandler } from '../lib/asyncHandler.js';
 import { AppError } from '../lib/AppError.js';
 import { sendData } from '../lib/respond.js';
 import { logger } from '../lib/logger.js';
+import { publicUser } from '../lib/userView.js';
 import { User } from '../models/user.model.js';
 import { loginAttempts, isLockedOut, recordFailedLogin, clearLoginFailures } from '../middleware/loginLockout.js';
 
-/** The user fields that are safe to return to a client — never the hash. */
-function publicUser(user) {
-  return {
-    id: user.id,
-    username: user.username,
-    role: user.role,
-    displayName: user.displayName,
-  };
-}
-
-export const login = asyncHandler(async (req, res) => {
+export async function login(req, res) {
   const { username, password } = req.body ?? {};
   if (!username || !password) {
     throw AppError.badRequest('username and password are required');
@@ -45,9 +35,9 @@ export const login = asyncHandler(async (req, res) => {
   req.session.user = { id: user.id, role: user.role };
   logger.info('auth.login.success', { userId: user.id });
   sendData(res, publicUser(user));
-});
+}
 
-export const logout = asyncHandler(async (req, res) => {
+export async function logout(req, res) {
   const userId = req.session?.user?.id ?? null;
 
   await new Promise((resolve, reject) => {
@@ -57,9 +47,9 @@ export const logout = asyncHandler(async (req, res) => {
   res.clearCookie('connect.sid');
   logger.info('auth.logout', { userId });
   sendData(res, { ok: true });
-});
+}
 
-export const me = asyncHandler(async (req, res) => {
+export async function me(req, res) {
   if (!req.user) throw AppError.unauthorized();
   sendData(res, publicUser(req.user));
-});
+}

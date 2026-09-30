@@ -1,4 +1,3 @@
-import { asyncHandler } from '../lib/asyncHandler.js';
 import { AppError } from '../lib/AppError.js';
 import { sendData } from '../lib/respond.js';
 import { Article } from '../models/article.model.js';
@@ -32,7 +31,7 @@ function parseRange(fromRaw, toRaw) {
  * publish/update markers read from the article's history. A malformed `:id`
  * surfaces as a Mongoose CastError, mapped by `errorHandler` to 400 `invalid_id`.
  */
-export const getArticleStats = asyncHandler(async (req, res) => {
+export async function getArticleStats(req, res) {
   const bucket = parseBucket(req.query.bucket);
   const { from, to } = parseRange(req.query.from, req.query.to);
 
@@ -46,4 +45,4 @@ export const getArticleStats = asyncHandler(async (req, res) => {
     .map((entry) => ({ t: entry.at.toISOString(), kind: entry.kind }));
 
   sendData(res, { series, markers });
-});
+}
