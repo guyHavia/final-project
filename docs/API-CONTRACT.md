@@ -43,6 +43,22 @@ router.patch('/:id/autosave', requireRole('reporter', 'editor'), asyncHandler(au
 `{ error: { code: "forbidden" } }` when the role is not allowed. Both fail via
 `next(AppError...)`; never build the error body in a route.
 
+## Pages (server-rendered, not JSON)
+
+Plain-path EJS pages from `routes/newsroom.routes.js` (P4). They carry no data;
+the client calls the JSON API below. Page access is a session-presence redirect
+only, not authorization: authorization stays on the API (`requireRole`).
+
+| Path | Who | Behaviour |
+|------|-----|-----------|
+| `GET /login` | anyone | login form; an already signed-in user is redirected to their area (`/newsroom` for a reporter, `/newsroom/review` for an editor) |
+| `GET /newsroom` | any signed-in user | newsroom work area (reporter drafts and notes) |
+| `GET /newsroom/review` | editor | review queue and management; a reporter is redirected to `/newsroom` |
+| `GET /newsroom/analytics` | editor | Impact Analytics screen; a reporter is redirected to `/newsroom` |
+
+No session on any `/newsroom*` page redirects to `/login`. Not built yet: the
+public feed and `GET /article/:slug` (P3-04/P3-05).
+
 ## Endpoints
 
 ### GET /api/health  — _skeleton_
@@ -263,6 +279,13 @@ changes are legal is decided by the state machine; an illegal one is `409`.
   - `200 → { data: { ok: true } }`; `404` if already deleted.
 
 #### Server-render hook (not an HTTP endpoint) — `getArticleForRender(slugOrId)`
+
+> **Status: not wired.** `getArticleForRender` and `recordArticleView` exist as
+> tested services, but **no route or page calls them yet**: the public pages
+> (`GET /article/:slug`, the feed; tickets P3-04/P3-05) have not been built. Until
+> they exist, **no article view is recorded**, so `viewCount` and Impact
+> Analytics stay at zero for real traffic (P2-08 stays in-progress). The
+> snippet below is the intended usage for P3, not current behaviour.
 
 For P3's `GET /article/:slug` EJS page. Import from `services/articleQuery.service.js`.
 

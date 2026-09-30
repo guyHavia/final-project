@@ -47,7 +47,7 @@ S-01 skeleton ✅
 | ID | Title | Owner | Size | Depends on | Status |
 |----|-------|-------|------|------------|--------|
 | S-01 | Shared Express skeleton | P5 | M | — | **done** (`d22944f`) |
-| S-02 | ESLint + prettier + `lint` script | P5 | S | S-01 | todo (`lint` script exists, no ESLint config) |
+| S-02 | ESLint + prettier + `lint` script | P5 | S | S-01 | todo (ESLint config and `lint` script exist but nothing enforces them; no CI) |
 | S-03 | CI: `npm test` + `lint` on PR | P5 | S | S-02 | todo (stretch) |
 | P1-01 | User model + bcrypt hashing | P1 | M | S-01 | done |
 | P1-02 | Session store (connect-mongo) + Restart test | P1 | M | P1-01 | done |
@@ -64,7 +64,7 @@ S-01 skeleton ✅
 | P2-05 | Published-version shadowing | P2 | M | P2-04 | done |
 | P2-06 | Public query endpoints (feed/search/filter/sort, keyset) | P2 | L | P2-01 | done |
 | P2-07 | `getArticleForRender(slug)` SSR hook | P2 | S | P2-01 | done |
-| P2-08 | Wire `recordView()` into article read | P2 | S | P2-06, P1-06 | in-progress (`recordArticleView` service exists, not yet called from the article read) |
+| P2-08 | Wire `recordView()` into article read | P2 | S | P2-06, P1-06 | in-progress (`recordArticleView` service exists; nothing calls it until the public article page, P3-05, exists) |
 | P3-01 | Comment model | P3 | S | S-01 | done |
 | P3-02 | Rate-limit middleware (in-memory, deviceId cookie) | P3 | M | S-01 | done |
 | P3-03 | Comment endpoints (list / create / editor delete) | P3 | M | P3-01, P3-02 | done |
@@ -82,5 +82,30 @@ S-01 skeleton ✅
 | P5-04 | User-admin CRUD (`/api/users*`) | P5 | M | P1-04, P1-05, P2-01 | done |
 | P5-05 | Seed script (500 articles + users + comments + stats) | P5 | L | P1-01, P2-01, P3-01, P1-06 | done |
 | P5-06 | Deployment: private repo, Zip, README finalize | P5 | S | most | todo |
+
+## Review-fix issues (#44-#62)
+
+Fixes from the code review. Status is per branch; none is merged to `main` yet.
+
+| Issue | Branch | Status |
+|-------|--------|--------|
+| #44 | `fix/44-rate-limit-bypass` | fixed on branch (unmerged) |
+| #45 | `fix/45-compose-mongo-exposure` | fixed on branch (unmerged) |
+| #46 | `fix/46-atomic-transitions` | fixed on branch (unmerged) |
+| #47 | `fix/47-lockout-hardening` | fixed on branch (unmerged) |
+| #48 | `fix/48-users-api` | fixed on branch (unmerged) |
+| #49 | `fix/49-body-parse-errors` | fixed on branch (unmerged) |
+| #50 | `fix/50-stats-range-cap` | fixed on branch (unmerged) |
+| #51 | `fix/51-weather-service` | fixed on branch (unmerged) |
+| #52 | `fix/52-security-headers` | fixed on branch (unmerged) |
+| #53 | `fix/53-seed-showcase` | fixed on branch (unmerged) |
+| #54 | `fix/54-analytics-screen` | fixed on branch (unmerged) |
+| #55 | `fix/55-newsroom-ux` | fixed on branch (unmerged) |
+| #56 | `fix/56-comment-moderation-ui` | fixed on branch (unmerged) |
+| #57 | none yet | pending |
+| #58 | `fix/58-backend-gaps` | fixed on branch (unmerged) |
+| #59 | `fix/59-docs-hygiene` | this branch (integrates #45, #51, #58) |
+| #61 | `fix/61-shared-helpers` | fixed on branch (unmerged) |
+| #62 | none yet | pending |
 
 Sizes: S ≈ half a day · M ≈ 1–2 days · L ≈ 3–4 days.
