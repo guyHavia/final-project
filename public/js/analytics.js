@@ -204,8 +204,23 @@ async function loadStats() {
     showChartState({ message: 'Fix the date range to see views.' });
     return;
   }
-  const { series, markers } = await apiRequest(`/articles/${selectedArticleId}/stats?${currentRangeQuery()}`);
+  let stats;
+  try {
+    stats = await apiRequest(`/articles/${selectedArticleId}/stats?${currentRangeQuery()}`);
+  } catch (err) {
+    if (token !== loadToken) return;
+    // The server rejects ranges that would need too many buckets (400): show its
+    // message on the range fields instead of throwing or claiming "no views".
+    if (err.status === 400) {
+      setRangeError(err.message);
+      showChartState({ message: 'Choose a shorter range or a larger bucket.' });
+    } else {
+      showChartState({ message: 'Could not load views. Try again.' });
+    }
+    return;
+  }
   if (token !== loadToken) return;
+  const { series, markers } = stats;
 
   const allZero = series.every((p) => p.count === 0);
   if (series.length === 0 || allZero) {
