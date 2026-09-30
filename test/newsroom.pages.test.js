@@ -162,3 +162,18 @@ describe('shared newsroom header', () => {
     assert.doesNotMatch(res.text, /Impact Analytics/);
   });
 });
+
+describe('GET /', () => {
+  test('redirects a signed-out visitor to /login', async () => {
+    const res = await request(app).get('/');
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.location, '/login');
+  });
+
+  test('redirects a signed-in reporter on to /newsroom via /login', async () => {
+    const cookie = await cookieFor('rep1');
+    const res = await request(app).get('/').set('Cookie', cookie).redirects(1);
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.location, '/newsroom');
+  });
+});
