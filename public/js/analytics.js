@@ -152,6 +152,8 @@ function drawChart({ series, markers, bucket }) {
       responsive: true,
       maintainAspectRatio: false,
       layout: { padding: { top: 2 * (BADGE_RADIUS * 2 + 2) + 4, right: 12 } },
+      // Chart.js defaults to intersect:true, so the tooltip only fires on the dots themselves.
+      interaction: { mode: 'nearest', axis: 'x', intersect: false },
       scales: {
         x: {
           type: 'linear',
