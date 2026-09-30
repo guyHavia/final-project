@@ -62,12 +62,18 @@ session stores only `{ id, role }`, snapshotted at login (D4 + ADR 0001).
     for an unknown username, a wrong password, **or** a deactivated account —
     one message, no user enumeration.
   - `429 { error: { message: "too many failed login attempts, try again later", code: "rate_limited" } }`
-    after 5 failed attempts for that username within 15 minutes; the lockout
-    lasts 15 minutes from the 5th failure. Checked before the credentials are
-    looked up, so a locked-out username gets 429 even with the correct
-    password. A successful login clears that username's failure count.
-    In-memory `Map`, same style as the comment rate limiter (D8) — a restart
-    resets it, which is harmless.
+    when either limit is hit within a 15-minute window: 5 attempts for that
+    username (locks the username for 15 minutes), or 20 attempts from that
+    client IP across any usernames (locks the IP for 15 minutes). Each attempt
+    is counted when the request arrives, before the credentials are looked up,
+    so parallel bursts cannot exceed the limit, and a locked-out username gets
+    429 even with the correct password. A successful login clears that
+    username's failure count and refunds the IP's attempt. Unknown and
+    deactivated users still cost a bcrypt comparison, so response time does not
+    reveal whether a username exists. Failed logins are logged with the
+    normalized username only. In-memory, size-capped maps pruned on a timer,
+    same style as the comment rate limiter (D8) — a restart resets them, which
+    is harmless.
 - `POST /api/auth/logout` — `200 → { data: { ok: true } }`. Destroys the session
   and clears the cookie. Safe to call without a session.
 - `GET /api/auth/me`
