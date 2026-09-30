@@ -36,6 +36,13 @@ export function errorHandler(err, req, res, next) {
       .json({ error: { message: 'duplicate value', code: 'duplicate' } });
   }
 
+  // body-parser (and other http-errors) mark client faults with status + expose.
+  if (err?.expose === true && err.status >= 400 && err.status < 500) {
+    const code = err.status === 413 ? 'payload_too_large' : 'bad_request';
+    const message = err.status === 413 ? 'request body too large' : 'malformed request body';
+    return res.status(err.status).json({ error: { message, code } });
+  }
+
   logger.error('http.unhandled_error', { message: err?.message, stack: err?.stack });
   return res
     .status(500)

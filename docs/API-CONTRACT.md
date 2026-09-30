@@ -15,6 +15,8 @@ adds the route. Frontend (P3, P4) codes against this.
   body by hand.
 - Mongoose errors are mapped by `errorHandler`: `ValidationError` → 400
   `validation`, `CastError` → 400 `invalid_id`, duplicate key → 409 `duplicate`.
+- Body-parser faults are mapped too: malformed JSON → 400 `bad_request`, body over
+  the 256 KB JSON limit → 413 `payload_too_large`.
 - Async route handlers are wrapped in `asyncHandler(...)`.
 
 ## How to protect a route

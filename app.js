@@ -17,7 +17,7 @@ import { assignDeviceId } from './middleware/rateLimit.js';
 export function createApp() {
   const app = express();
 
-  app.use(express.json());
+  app.use(express.json({ limit: '256kb' }));
   app.use(cookieParser());
   app.use(assignDeviceId);
 
