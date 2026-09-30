@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
-import { Article, CATEGORIES, STATES, PUBLIC_FILTER } from '../models/article.model.js';
-import { User } from '../models/user.model.js';
+import { Article, CATEGORIES, STATE, STATES, PUBLIC_FILTER } from '../models/article.model.js';
+import { User, ROLE } from '../models/user.model.js';
 import { AppError } from '../lib/AppError.js';
+import { escapeRegex, clampLimit } from '../lib/query.js';
 import { encodeCursor, decodeCursor } from '../lib/cursor.js';
 import { CONTENT_FIELDS, workingCopyDiffersFromPublished } from './articleState.service.js';
 
@@ -24,13 +25,7 @@ const PUBLIC_SORTS = {
 
 /** `limit` → an integer in 1..MAX_LIMIT; anything non-numeric → DEFAULT_LIMIT. */
 export function parseLimit(raw) {
-  const n = Number.parseInt(raw, 10);
-  if (Number.isNaN(n)) return DEFAULT_LIMIT;
-  return Math.min(MAX_LIMIT, Math.max(1, n));
-}
-
-function escapeRegex(text) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return clampLimit(raw, { defaultLimit: DEFAULT_LIMIT, maxLimit: MAX_LIMIT });
 }
 
 /** Case-insensitive "contains" match on `field`, or `null` when `q` is empty. */
@@ -125,7 +120,7 @@ export function buildMineQuery(authorId, { state, cursor } = {}) {
  */
 const HAS_UNSUBMITTED_CHANGES = {
   $and: [
-    { $eq: ['$state', 'Published'] },
+    { $eq: ['$state', STATE.PUBLISHED] },
     { $or: CONTENT_FIELDS.map((f) => ({ $ne: [`$${f}`, `$published.${f}`] })) },
   ],
 };
@@ -210,7 +205,7 @@ function toWorkItem(doc) {
     image: doc.image ?? null,
     category: doc.category,
     author: doc.author,
-    editorNote: doc.state === 'Returned for Corrections' ? (doc.editorNote ?? null) : null,
+    editorNote: doc.state === STATE.RETURNED ? (doc.editorNote ?? null) : null,
     hasPublishedVersion: Boolean(doc.published),
     hasUnsubmittedChanges: Boolean(doc.hasUnsubmittedChanges),
     publishedAt: doc.firstPublishedAt ?? null,
@@ -247,7 +242,7 @@ export async function getArticleForViewer(id, viewer) {
   const doc = await Article.findById(id).lean();
   if (!doc) throw AppError.notFound('article not found');
 
-  const isEditor = viewer?.role === 'editor';
+  const isEditor = viewer?.role === ROLE.EDITOR;
   const isOwner = viewer && String(doc.author) === String(viewer._id);
   const [withAuthor] = await attachAuthors([doc]);
 
@@ -315,7 +310,7 @@ function toFullArticle(doc) {
     editorNote: doc.editorNote ?? null,
     submittedAt: doc.submittedAt ?? null,
     published: doc.published ?? null,
-    hasUnsubmittedChanges: doc.state === 'Published' && workingCopyDiffersFromPublished(doc),
+    hasUnsubmittedChanges: doc.state === STATE.PUBLISHED && workingCopyDiffersFromPublished(doc),
     firstPublishedAt: doc.firstPublishedAt ?? null,
     history: (doc.history ?? []).map((h) => ({ at: h.at, kind: h.kind, by: h.by ? String(h.by) : null })),
     viewCount: doc.viewCount ?? 0,

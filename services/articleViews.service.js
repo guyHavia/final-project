@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
 import { Article, PUBLIC_FILTER } from '../models/article.model.js';
+import { isObjectId } from '../lib/query.js';
 import { logger } from '../lib/logger.js';
 import { recordView } from './stats.service.js';
 
@@ -43,9 +43,4 @@ export async function recordArticleView(articleId, { viewer } = {}) {
 
   await recordView(articleId);
   return true;
-}
-
-function isObjectId(value) {
-  if (value instanceof mongoose.Types.ObjectId) return true;
-  return typeof value === 'string' && /^[0-9a-f]{24}$/i.test(value);
 }

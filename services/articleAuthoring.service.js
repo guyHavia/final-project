@@ -1,4 +1,5 @@
-import { Article, CATEGORIES } from '../models/article.model.js';
+import { Article, CATEGORIES, STATE } from '../models/article.model.js';
+import { ROLE } from '../models/user.model.js';
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
 import { applyTransition } from './articleState.service.js';
@@ -14,7 +15,7 @@ const LIMITS = { title: 200, abstract: 500, body: 50_000, image: 2_000, category
 const EDITABLE_FIELDS = Object.keys(LIMITS);
 
 /** States a reporter may still edit their own article in. Editors may edit in any state. */
-const REPORTER_EDITABLE_STATES = ['In Preparation', 'Returned for Corrections', 'Published'];
+const REPORTER_EDITABLE_STATES = [STATE.IN_PREPARATION, STATE.RETURNED, STATE.PUBLISHED];
 
 function isHttpUrl(value) {
   try {
@@ -82,7 +83,7 @@ function toActor(user) {
 async function loadEditable(id, user) {
   const article = await Article.findById(id);
   if (!article) throw AppError.notFound('article not found');
-  if (user.role === 'editor') return article;
+  if (user.role === ROLE.EDITOR) return article;
 
   if (String(article.author) !== String(user._id)) throw AppError.forbidden();
   if (!REPORTER_EDITABLE_STATES.includes(article.state)) {
@@ -138,7 +139,7 @@ export async function submitArticle(id, user) {
   const article = await Article.findById(id);
   if (!article) throw AppError.notFound('article not found');
 
-  applyTransition(article, 'Pending Editor Approval', toActor(user));
+  applyTransition(article, STATE.PENDING, toActor(user));
   await article.save();
   logger.info('article.submitted', { articleId: String(article._id), userId: String(user._id) });
   return presentFullArticle(article.toObject());

@@ -1,7 +1,13 @@
 import mongoose from 'mongoose';
 
 /** The four lifecycle states an article can be in. Single source of truth — no parallel booleans. */
-export const STATES = ['In Preparation', 'Pending Editor Approval', 'Published', 'Returned for Corrections'];
+export const STATE = {
+  IN_PREPARATION: 'In Preparation',
+  PENDING: 'Pending Editor Approval',
+  PUBLISHED: 'Published',
+  RETURNED: 'Returned for Corrections',
+};
+export const STATES = Object.values(STATE);
 
 /**
  * The shared category list (issue #4, P2-01 schema section: "constrained to a
@@ -62,7 +68,7 @@ const articleSchema = new mongoose.Schema(
     slug: { type: String, unique: true, lowercase: true, trim: true, sparse: true },
     category: { type: String, required: true, trim: true, enum: CATEGORIES },
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    state: { type: String, enum: STATES, default: 'In Preparation', required: true },
+    state: { type: String, enum: STATES, default: STATE.IN_PREPARATION, required: true },
 
     // Working copy — what the reporter edits, what autosave writes.
     // `title` is not required here so autosave can store a half-written draft;

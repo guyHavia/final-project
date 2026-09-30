@@ -1,4 +1,4 @@
-import { Article } from '../models/article.model.js';
+import { Article, STATE } from '../models/article.model.js';
 import { Comment } from '../models/comment.model.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
 import { AppError } from '../lib/AppError.js';
@@ -32,7 +32,7 @@ async function loadArticle(id) {
  */
 export async function approveArticle(id, user) {
   const article = await loadArticle(id);
-  applyTransition(article, 'Published', toActor(user));
+  applyTransition(article, STATE.PUBLISHED, toActor(user));
   await saveWithSlugRetry(article);
 
   const marker = article.history[article.history.length - 1];
@@ -70,7 +70,7 @@ function readNote(input) {
 export async function returnArticle(id, user, input) {
   const note = readNote(input);
   const article = await loadArticle(id);
-  applyTransition(article, 'Returned for Corrections', toActor(user), { note });
+  applyTransition(article, STATE.RETURNED, toActor(user), { note });
   await article.save();
   logger.info('article.returned', { articleId: String(article._id), userId: String(user._id) });
   return presentFullArticle(article.toObject());

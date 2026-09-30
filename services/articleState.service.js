@@ -1,15 +1,17 @@
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
+import { STATE } from '../models/article.model.js';
+import { ROLE } from '../models/user.model.js';
 
 /**
  * The legal edges of the article lifecycle. Anything not listed here — including
  * every X -> X self-transition — is structurally illegal regardless of actor.
  */
 const REACHABLE = {
-  'In Preparation': ['Pending Editor Approval'],
-  'Returned for Corrections': ['Pending Editor Approval'],
-  Published: ['Pending Editor Approval'],
-  'Pending Editor Approval': ['Published', 'Returned for Corrections'],
+  [STATE.IN_PREPARATION]: [STATE.PENDING],
+  [STATE.RETURNED]: [STATE.PENDING],
+  [STATE.PUBLISHED]: [STATE.PENDING],
+  [STATE.PENDING]: [STATE.PUBLISHED, STATE.RETURNED],
 };
 
 /** Simple placeholder slug: lowercase, trim, dash-run non-alphanumerics, strip edge dashes. */
@@ -42,7 +44,7 @@ function isReachable(from, to) {
 /** Owner-or-editor: required for every transition that submits into Pending Editor Approval. */
 function isOwnerOrEditor(article, actor) {
   if (!actor) return false;
-  if (actor.role === 'editor') return true;
+  if (actor.role === ROLE.EDITOR) return true;
   // `author` is a bare id, or a User document when the caller used `.populate('author')`.
   const authorId = article.author?._id ?? article.author;
   return String(authorId) === String(actor.id);
@@ -51,11 +53,11 @@ function isOwnerOrEditor(article, actor) {
 /** Mirrors the structural + role/ownership guards only — no content/note check. */
 function actorCanAttempt(article, to, actor) {
   const from = article.state;
-  if (to === 'Pending Editor Approval') {
+  if (to === STATE.PENDING) {
     return isOwnerOrEditor(article, actor);
   }
-  if (from === 'Pending Editor Approval' && (to === 'Published' || to === 'Returned for Corrections')) {
-    return actor?.role === 'editor';
+  if (from === STATE.PENDING && (to === STATE.PUBLISHED || to === STATE.RETURNED)) {
+    return actor?.role === ROLE.EDITOR;
   }
   return false;
 }
@@ -105,12 +107,12 @@ export function applyTransition(article, to, actor, { note } = {}) {
   // Every submit and every approve needs complete content — including a revision
   // of a Published article, and an approve after an editor edited during review —
   // so an empty article can never reach the public.
-  if ((to === 'Pending Editor Approval' || to === 'Published') && !hasRequiredContent(article)) {
+  if ((to === STATE.PENDING || to === STATE.PUBLISHED) && !hasRequiredContent(article)) {
     throw AppError.badRequest('title, body, and category are required');
   }
 
-  if (to === 'Pending Editor Approval') {
-    if (from === 'Published') {
+  if (to === STATE.PENDING) {
+    if (from === STATE.PUBLISHED) {
       if (!workingCopyDiffersFromPublished(article)) {
         throw AppError.conflict('no changes to submit');
       }
@@ -125,7 +127,7 @@ export function applyTransition(article, to, actor, { note } = {}) {
     return article;
   }
 
-  if (to === 'Published') {
+  if (to === STATE.PUBLISHED) {
     const now = new Date();
     const wasAlreadyPublishedBefore = Boolean(article.firstPublishedAt);
     const nextVersion = (article.published?.version ?? 0) + 1;
