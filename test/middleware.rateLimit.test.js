@@ -4,7 +4,6 @@ import express from 'express';
 import request from 'supertest';
 import cookieParser from 'cookie-parser';
 import rateLimit, { checkRateLimit, pruneStore, assignDeviceId } from '../middleware/rateLimit.js';
-import { AppError } from '../lib/AppError.js';
 
 test('Pure function: checkRateLimit handles sliding window and prunes empty buckets', () => {
     const store = new Map();
@@ -97,6 +96,7 @@ function buildApp(options) {
     app.post('/comment', assignDeviceId, rateLimit(options), (req, res) => {
         res.status(201).json({ data: 'ok' });
     });
+    // eslint-disable-next-line no-unused-vars -- Express identifies error handlers by their 4-argument arity
     app.use((err, req, res, next) => {
         res.status(err.status || 500).json({ error: { message: err.message, code: err.code || 'internal' } });
     });
