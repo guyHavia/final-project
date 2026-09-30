@@ -29,6 +29,7 @@ newsroomRouter.get('/login', (req, res) => {
 });
 
 newsroomRouter.get('/newsroom', requireSession, (req, res) => {
+  if (req.session.user.role === 'editor') return res.redirect('/newsroom/review');
   res.render('newsroom');
 });
 

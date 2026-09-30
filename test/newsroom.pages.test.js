@@ -79,10 +79,11 @@ describe('GET /newsroom', () => {
     assert.match(res.text, /data-screen="newsroom-reporter"/);
   });
 
-  test('also renders for an editor session (editors may check their own queue elsewhere, but this page itself only gates on session presence)', async () => {
+  test('redirects an editor session to /newsroom/review', async () => {
     const cookie = await cookieFor('ed1');
     const res = await request(app).get('/newsroom').set('Cookie', cookie);
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.location, '/newsroom/review');
   });
 });
 
