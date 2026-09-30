@@ -59,6 +59,7 @@ test('HTTP integration: Issues cookie, limits requests, and delegates errors', a
     });
 
     // Skeleton error middleware mock matching the provided errorHandler behavior
+    // eslint-disable-next-line no-unused-vars -- Express identifies error handlers by their 4-argument arity
     app.use((err, req, res, next) => {
         const status = err.status || 500;
         const code = err.code || 'internal';

@@ -5,7 +5,6 @@ const commentSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Article',
     required: true,
-    index: true,
   },
   authorName: {
     type: String,
@@ -34,6 +33,7 @@ const commentSchema = new mongoose.Schema({
   timestamps: { createdAt: true, updatedAt: false },
 });
 
+// The only index on `article`: its prefix also serves plain per-article lookups.
 // Serves the newest-first per-article list; `_id` is the tie-break for comments
 // posted in the same millisecond, so keyset paging never skips or repeats one.
 commentSchema.index({ article: 1, createdAt: -1, _id: -1 });

@@ -1,8 +1,8 @@
-import { Article, CATEGORIES, STATE } from '../models/article.model.js';
+import { Article, CATEGORIES, STATE, CONTENT_LIMITS, CONTENT_FIELDS } from '../models/article.model.js';
 import { ROLE } from '../models/user.model.js';
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
-import { applyTransition, guardTransition, saveTransition } from './articleState.service.js';
+import { applyTransition, guardTransition, saveTransition, toActor } from './articleState.service.js';
 import { presentFullArticle } from './articleQuery.service.js';
 
 /**
@@ -10,9 +10,6 @@ import { presentFullArticle } from './articleQuery.service.js';
  * Every permission and validation rule is enforced here, on the server.
  */
 
-/** The only fields a client may write. Anything else (author, state, …) is a 400. */
-const LIMITS = { title: 200, abstract: 500, body: 50_000, image: 2_000, category: 50 };
-const EDITABLE_FIELDS = Object.keys(LIMITS);
 
 /** States a reporter may still edit their own article in. Editors may edit in any state. */
 const REPORTER_EDITABLE_STATES = [STATE.IN_PREPARATION, STATE.RETURNED, STATE.PUBLISHED];
@@ -27,8 +24,8 @@ function isHttpUrl(value) {
 }
 
 /**
- * Checks a request body against the editable fields and returns the fields to
- * write. Modes differ only in what may be blank:
+ * Checks a request body against CONTENT_FIELDS (the only fields a client may
+ * write; anything else is a 400) and returns the fields to write. Modes differ only in what may be blank:
  * - `create` — title and category required and non-blank.
  * - `edit`   — at least one field; a title, if sent, must be non-blank.
  * - `autosave` — anything goes blank (a half-written draft), but never invalid.
@@ -43,10 +40,10 @@ function readContent(input, mode) {
 
   const fields = {};
   for (const [name, value] of Object.entries(input)) {
-    if (!EDITABLE_FIELDS.includes(name)) throw AppError.badRequest(`unknown field: ${name}`);
+    if (!CONTENT_FIELDS.includes(name)) throw AppError.badRequest(`unknown field: ${name}`);
     if (typeof value !== 'string') throw AppError.badRequest(`${name} must be a string`);
-    if (value.length > LIMITS[name]) {
-      throw AppError.badRequest(`${name} is too long (max ${LIMITS[name]} characters)`);
+    if (value.length > CONTENT_LIMITS[name]) {
+      throw AppError.badRequest(`${name} is too long (max ${CONTENT_LIMITS[name]} characters)`);
     }
     fields[name] = value;
   }
@@ -68,11 +65,6 @@ function readContent(input, mode) {
     if ('title' in fields && titleBlank) throw AppError.badRequest('title cannot be empty');
   }
   return fields;
-}
-
-/** The session user as the state machine expects it. */
-function toActor(user) {
-  return { id: String(user._id), role: user.role };
 }
 
 /**

@@ -1,9 +1,10 @@
 import { User, ROLE, ROLES, createUser } from '../models/user.model.js';
-import { Article } from '../models/article.model.js';
 import { sendData } from '../lib/respond.js';
 import { AppError } from '../lib/AppError.js';
-import { escapeRegex, isObjectId, clampLimit } from '../lib/query.js';
+import { isObjectId } from '../lib/query.js';
+import { toUserView } from '../lib/userView.js';
 import { destroySessionsForUser } from '../config/session.js';
+import { listUsers, deleteOrDeactivateUser } from '../services/users.service.js';
 
 const PASSWORD_MIN_CHARS = 10;
 /** bcrypt silently truncates input beyond 72 bytes, so refuse it instead. */
@@ -14,18 +15,6 @@ const DISPLAY_NAME_MAX = 100;
 const CREATE_FIELDS = ['username', 'password', 'role', 'displayName'];
 const UPDATE_FIELDS = ['role', 'displayName', 'active', 'password'];
 const ME_FIELDS = ['displayName', 'password', 'currentPassword'];
-
-function toUserView(user) {
-    return {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        displayName: user.displayName,
-        active: user.active,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt
-    };
-}
 
 /** The body must be a plain object whose keys are all in `allowed`. */
 function requireKnownFields(body, allowed) {
@@ -103,32 +92,8 @@ export async function create(req, res) {
 }
 
 export async function list(req, res) {
-    const { q, cursor } = req.query;
-    const limit = clampLimit(req.query.limit, { defaultLimit: 20, maxLimit: 100 });
-
-    if (q !== undefined && typeof q !== 'string') throw AppError.badRequest('q must be a string');
-    if (cursor !== undefined && !isObjectId(cursor)) throw AppError.badRequest('invalid cursor');
-
-    const query = {};
-    if (q) {
-        query.username = { $regex: escapeRegex(q), $options: 'i' };
-    }
-    if (cursor) {
-        query._id = { $gt: cursor };
-    }
-
-    const users = await User.find(query).sort({ _id: 1 }).limit(limit + 1);
-
-    let nextCursor = null;
-    if (users.length > limit) {
-        users.pop();
-        nextCursor = users[users.length - 1].id;
-    }
-
-    sendData(res, {
-        users: users.map(toUserView),
-        nextCursor
-    });
+    const { users, nextCursor } = await listUsers(req.query);
+    sendData(res, { users: users.map(toUserView), nextCursor });
 }
 
 export async function getOne(req, res) {
@@ -173,17 +138,7 @@ export async function remove(req, res) {
     forbidSelf(req, user, 'delete');
     await requireAnotherActiveEditor(user);
 
-    const articleCount = await Article.countDocuments({ author: user.id });
-    if (articleCount === 0) {
-        await user.deleteOne();
-        await destroySessionsForUser(user.id);
-        sendData(res, { ok: true, deleted: 'hard' });
-    } else {
-        user.active = false;
-        await user.save();
-        await destroySessionsForUser(user.id);
-        sendData(res, { ok: true, deleted: 'soft' });
-    }
+    sendData(res, { ok: true, deleted: await deleteOrDeactivateUser(user) });
 }
 
 export async function updateMe(req, res) {

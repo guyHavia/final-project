@@ -57,6 +57,7 @@ export function buildEnv(source = process.env) {
     trustProxy: parseTrustProxy(source.TRUST_PROXY),
     weatherApiKey: source.WEATHER_API_KEY,
     weatherCity: source.WEATHER_CITY ?? 'Tel Aviv,IL',
+    seedPassword: source.SEED_PASSWORD,
   };
 }
 

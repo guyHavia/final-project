@@ -6,10 +6,9 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import cookieParser from 'cookie-parser';
 
-import commentRoutes from '../routes/comment.routes.js';
+import { commentRoutes } from '../routes/comment.routes.js';
 import { Article } from '../models/article.model.js';
 import { Comment } from '../models/comment.model.js';
-import { AppError } from '../lib/AppError.js';
 
 let mongoServer;
 let app;
@@ -39,6 +38,7 @@ test.before(async () => {
     app.use('/api', commentRoutes);
 
     // Skeleton Terminal Error Handler Mock
+    // eslint-disable-next-line no-unused-vars -- Express identifies error handlers by their 4-argument arity
     app.use((err, req, res, next) => {
         if (err.name === 'ValidationError') {
             return res.status(400).json({ error: { message: err.message, code: 'validation' } });

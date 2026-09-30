@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { AppError } from '../lib/AppError.js';
+import { env } from '../config/env.js';
 
 /**
  * Middleware to ensure a deviceId cookie exists.
@@ -14,7 +15,7 @@ export function assignDeviceId(req, res, next) {
             sameSite: 'Lax',
             path: '/',
             maxAge: 365 * 24 * 60 * 60 * 1000, // ≈ 1 year
-            secure: process.env.NODE_ENV === 'production'
+            secure: env.nodeEnv === 'production'
         });
         
         // Ensure the cookie is available to subsequent middleware in the same request
