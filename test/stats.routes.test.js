@@ -132,4 +132,15 @@ describe('GET /api/articles/:id/stats', () => {
     assert.equal(res.status, 404);
     assert.equal(res.body.error.code, 'not_found');
   });
+
+  test('range yielding too many buckets → 400 bad_request', async () => {
+    const cookie = await loginCookie('editor1');
+    const res = await request(app)
+      .get(`/api/articles/${article.id}/stats`)
+      .query({ from: '2000-01-01', bucket: 'hour' })
+      .set('Cookie', cookie);
+
+    assert.equal(res.status, 400);
+    assert.equal(res.body.error.code, 'bad_request');
+  });
 });

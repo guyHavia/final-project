@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
 
@@ -34,6 +35,15 @@ function truncateToBucket(date, bucket) {
   return truncated;
 }
 
+/** Most buckets one stats request may span (about 83 days hourly, 5.5 years daily). */
+export const MAX_BUCKETS = 2000;
+
+/** Number of buckets `[from, to]` spans — what `bucketBoundaries` would return, without building it. */
+function bucketCount(from, to, bucket) {
+  const span = truncateToBucket(to, bucket).getTime() - truncateToBucket(from, bucket).getTime();
+  return Math.floor(span / BUCKET_STEP_MS[bucket]) + 1;
+}
+
 /** Every bucket boundary from `from` through `to`, inclusive, ascending — no gaps. */
 function bucketBoundaries(from, to, bucket) {
   const step = BUCKET_STEP_MS[bucket];
@@ -52,6 +62,10 @@ function bucketBoundaries(from, to, bucket) {
  * Article/history/markers; the controller composes those on top.
  */
 export async function getSeries({ articleId, from, to, bucket }) {
+  if (bucketCount(from, to, bucket) > MAX_BUCKETS) {
+    throw AppError.badRequest(`range too large: at most ${MAX_BUCKETS} ${bucket} buckets`);
+  }
+
   const rows = await ViewEvent.aggregate([
     {
       $match: {
@@ -73,4 +87,11 @@ export async function getSeries({ articleId, from, to, bucket }) {
     t: t.toISOString(),
     count: countByBucket.get(t.getTime()) ?? 0,
   }));
+}
+
+/** Publish/update markers from an article's `history`, ascending by `at`. Does not mutate the input. */
+export function historyMarkers(history) {
+  return [...history]
+    .sort((a, b) => a.at - b.at)
+    .map((entry) => ({ t: entry.at.toISOString(), kind: entry.kind }));
 }
