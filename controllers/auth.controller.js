@@ -41,6 +41,10 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   loginLimiter.succeed(normalizedUsername, ip);
+  // Fresh session id at login (session-fixation defence); the old id is discarded.
+  await new Promise((resolve, reject) => {
+    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+  });
   req.session.user = { id: user.id, role: user.role };
   logger.info('auth.login.success', { userId: user.id });
   sendData(res, publicUser(user));

@@ -35,8 +35,12 @@ request when needed.
 - A TTL index on the session collection expires stale sessions.
 - One extra dependency (`connect-mongo`) and one indexed Mongo read per
   authenticated request — acceptable.
-- Role is snapshotted into the session at login. A role change by an editor takes
-  effect on the target user's next login, not mid-session. Documented, accepted.
+- Role is snapshotted into the session at login. ~~A role change takes effect on
+  the next login.~~ **Superseded (issue #62):** a role change, password change
+  (own or editor reset) or deactivation now destroys the user's sessions, so a
+  demoted editor loses access on their next request. Changing your own password
+  keeps the current session. The snapshot stays, but is never stale for long.
+  Login also regenerates the session id.
 
 ## Alternatives
 
