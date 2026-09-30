@@ -30,6 +30,7 @@
             <input class="field" id="article-search" type="search" placeholder="Search published articles…" autocomplete="off" />
           </div>
           <ul id="article-results" class="search-results"></ul>
+          <p id="search-status" class="muted" role="status" hidden></p>
         </section>
 
         <section class="panel" aria-label="Views over time">
@@ -53,10 +54,13 @@
             </div>
           </div>
 
-          <div id="chart-area" class="chart-area" hidden>
-            <canvas id="views-chart"></canvas>
+          <p id="range-error" class="field-error" role="alert" hidden></p>
+
+          <div id="chart-area" hidden>
+            <div class="chart-area"><canvas id="views-chart"></canvas></div>
+            <ol id="marker-legend" class="marker-legend" aria-label="Publish and update markers"></ol>
           </div>
-          <p id="empty-message" class="muted" hidden>No views recorded in this range.</p>
+          <p id="empty-message" class="muted empty-state">Search for a published article to see how its views changed over time.</p>
         </section>
       </div>
     </main>
