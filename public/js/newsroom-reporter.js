@@ -1,5 +1,5 @@
 import { apiRequest, me } from './auth-client.js';
-import { STATE_META, initShell, agoLabel } from './shell.js';
+import { STATE_META, initShell, showToast, agoLabel } from './shell.js';
 import { createSaveIndicator } from './save-indicator.js';
 
 // Read-only once submitted; the article is locked until an editor acts on it.
@@ -31,8 +31,10 @@ const els = {
 
 let currentArticleId = null;
 let indicator = null;
-let myArticles = [];
-let myArticlesCursor = null;
+// Each state is its own cursor-paginated query (GET /api/articles/mine?state=...),
+// so "load more" is per column: { items, nextCursor } keyed by state.
+let myByState = new Map();
+const FIELD_NAMES = ['title', 'category', 'abstract', 'body', 'image'];
 
 function fieldSnapshot() {
   return {
@@ -44,7 +46,24 @@ function fieldSnapshot() {
   };
 }
 
+/** The server names the offending field in its message ("image must be an http(s) URL"). */
+function markInvalidField(message = '') {
+  const name = FIELD_NAMES.find((f) => new RegExp(`\\b${f}\\b`, 'i').test(message));
+  if (!name) return;
+  els[name].setAttribute('aria-invalid', 'true');
+  els[name].setAttribute('aria-describedby', 'save-status');
+}
+
+function clearInvalidFields() {
+  for (const name of FIELD_NAMES) {
+    els[name].removeAttribute('aria-invalid');
+    els[name].removeAttribute('aria-describedby');
+  }
+}
+
 function renderSaveStatus({ state, savedAt, errorMessage }) {
+  els.saveStatus.classList.toggle('is-error', state === 'error');
+  if (state !== 'error') clearInvalidFields();
   if (state === 'saving') {
     els.saveStatus.textContent = 'Saving…';
   } else if (state === 'saved') {
@@ -52,6 +71,7 @@ function renderSaveStatus({ state, savedAt, errorMessage }) {
     els.saveStatus.textContent = `Saved${time ? ' at ' + time : ''}`;
   } else if (state === 'error') {
     els.saveStatus.textContent = `Not saved (${errorMessage}) — `;
+    markInvalidField(errorMessage);
     const retry = document.createElement('button');
     retry.type = 'button';
     retry.className = 'link-btn';
@@ -71,32 +91,27 @@ function setFormEditable(editable) {
   }
 }
 
-/**
- * GET /api/articles/mine is one cursor-paginated list across every state (not
- * per-state), ordered by updatedAt desc — so "load more" fetches the next
- * page of that single list and re-buckets everything client-side, rather
- * than paginating each group independently.
- */
+async function fetchMinePage(state, cursor) {
+  const query = `state=${encodeURIComponent(state)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+  return apiRequest(`/articles/mine?${query}`);
+}
+
 async function loadGroups() {
-  const { items, nextCursor } = await apiRequest('/articles/mine');
-  myArticles = items;
-  myArticlesCursor = nextCursor;
+  const pages = await Promise.all(STATE_ORDER.map((state) => fetchMinePage(state)));
+  myByState = new Map(STATE_ORDER.map((state, i) => [state, pages[i]]));
   renderGroups();
 }
 
-async function loadMoreArticles() {
-  const { items, nextCursor } = await apiRequest(`/articles/mine?cursor=${encodeURIComponent(myArticlesCursor)}`);
-  myArticles = myArticles.concat(items);
-  myArticlesCursor = nextCursor;
+async function loadMoreForState(state) {
+  const { items, nextCursor } = myByState.get(state);
+  const next = await fetchMinePage(state, nextCursor);
+  myByState.set(state, { items: items.concat(next.items), nextCursor: next.nextCursor });
   renderGroups();
 }
 
 function renderGroups() {
-  const byState = new Map(STATE_ORDER.map((s) => [s, []]));
-  for (const item of myArticles) byState.get(item.state)?.push(item);
-
   els.groups.innerHTML = '';
-  if (myArticles.length === 0) {
+  if (STATE_ORDER.every((state) => myByState.get(state).items.length === 0)) {
     els.groups.className = '';
     els.groups.innerHTML = '<div class="empty"><b>No articles yet</b>Start your first one with “New article”.</div>';
     return;
@@ -104,7 +119,7 @@ function renderGroups() {
   els.groups.className = 'board';
 
   for (const state of STATE_ORDER) {
-    const articles = byState.get(state);
+    const { items: articles, nextCursor } = myByState.get(state);
     const { key, label } = STATE_META[state];
 
     const section = document.createElement('section');
@@ -112,7 +127,7 @@ function renderGroups() {
     const heading = document.createElement('h2');
     heading.innerHTML = `<span class="badge b-${key}"></span><span class="count"></span>`;
     heading.querySelector('.badge').textContent = label;
-    heading.querySelector('.count').textContent = String(articles.length);
+    heading.querySelector('.count').textContent = `${articles.length}${nextCursor ? '+' : ''}`;
     section.append(heading);
 
     if (articles.length === 0) {
@@ -149,16 +164,16 @@ function renderGroups() {
       }
       section.append(card);
     }
-    els.groups.append(section);
-  }
 
-  if (myArticlesCursor) {
-    const loadMore = document.createElement('button');
-    loadMore.type = 'button';
-    loadMore.className = 'btn btn-ghost load-more-button';
-    loadMore.textContent = 'Load more';
-    loadMore.addEventListener('click', loadMoreArticles);
-    els.groups.append(loadMore);
+    if (nextCursor) {
+      const loadMore = document.createElement('button');
+      loadMore.type = 'button';
+      loadMore.className = 'btn btn-ghost btn-sm load-more-button';
+      loadMore.textContent = 'Load more';
+      loadMore.addEventListener('click', () => loadMoreForState(state));
+      section.append(loadMore);
+    }
+    els.groups.append(section);
   }
 }
 
@@ -215,6 +230,7 @@ async function handleSubmitForApproval() {
     await apiRequest(`/articles/${currentArticleId}/submit`, { method: 'POST' });
     closeEditor();
     await loadGroups();
+    showToast('Submitted for approval');
   } catch (err) {
     els.submitError.textContent = err.message || 'could not submit';
     els.submitError.hidden = false;
@@ -247,6 +263,8 @@ function wireStaticControls() {
 
   els.newButton.addEventListener('click', () => {
     els.newForm.hidden = !els.newForm.hidden;
+    els.newError.hidden = true;
+    if (!els.newForm.hidden) els.newTitle.focus();
   });
   els.newForm.addEventListener('submit', handleCreateArticle);
 
@@ -254,7 +272,10 @@ function wireStaticControls() {
   els.submitButton.addEventListener('click', handleSubmitForApproval);
 
   for (const field of [els.title, els.category, els.abstract, els.body, els.image]) {
-    field.addEventListener('input', () => indicator?.notify(fieldSnapshot));
+    field.addEventListener('input', () => {
+      els.submitError.hidden = true; // a stale "required" error must not outlive the edit that fixes it
+      indicator?.notify(fieldSnapshot);
+    });
     field.addEventListener('change', () => indicator?.notify(fieldSnapshot));
   }
 

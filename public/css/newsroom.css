@@ -337,3 +337,40 @@ textarea.field { padding: 10px 14px; resize: vertical; }
   .chart-area { height: 280px; }
   .drawer-foot .btn { flex: 1 1 45%; }
 }
+
+/* =====================================================================
+   Issue #55 — newsroom UX additions (toasts, invalid fields, tablet).
+   Kept in one block at the end so other tickets' CSS edits merge cleanly.
+   ===================================================================== */
+
+/* action feedback toasts (shell.js showToast) */
+.toast-region { position: fixed; inset-inline: 16px; bottom: 20px; z-index: 70; display: grid; gap: 8px; justify-items: center; pointer-events: none; }
+.toast { pointer-events: auto; max-width: min(480px, 100%); padding: 12px 18px; border-radius: 999px; background: var(--nav); color: var(--nav-ink); font-weight: 600; font-size: 0.9rem; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); animation: toast-in 0.2s; }
+.toast-error { background: var(--st-ret); color: var(--brand-ink); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* error text is red everywhere: autosave status, login, invalid fields */
+#save-status.is-error { color: var(--st-ret); font-weight: 600; }
+.field[aria-invalid='true'] { border-color: var(--st-ret); background: var(--st-ret-bg); }
+#login-error { font-weight: 600; }
+
+/* per-column "Load more" on the reporter board */
+.col .load-more-button { margin-top: 4px; }
+
+/* tablet (~768px): between the phone and desktop layouts */
+@media (max-width: 1024px) {
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow-x: visible; }
+  .page { padding-inline: 24px; }
+}
+@media (max-width: 768px) {
+  .nav-in { padding: 0 12px; }
+  .card { grid-template-columns: 96px 1fr; }
+  .thumb { width: 96px; height: 72px; }
+  .compare-header, .compare-row { grid-template-columns: 90px 1fr 1fr; }
+  .drawer { width: min(640px, 100%); }
+  .page-head { align-items: flex-start; }
+}
+@media (max-width: 700px) {
+  .board { grid-template-columns: 1fr; }
+  .drawer { width: 100%; }
+}
