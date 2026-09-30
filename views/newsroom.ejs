@@ -12,54 +12,25 @@
     below is filled in by public/js/newsroom-reporter.js after load.
   -->
   <div data-screen="newsroom-reporter">
-    <header class="newsroom-header">
-      <h1>The Daily Web — Newsroom</h1>
-      <div class="header-user">
-        <span id="user-display-name"></span>
-        <button id="logout-button" type="button">Log out</button>
-      </div>
-    </header>
+    <%- include('partials/header', { screen: 'reporter' }) %>
 
-    <main class="reporter-main">
-      <div class="reporter-toolbar">
-        <button id="new-article-button" type="button">New article</button>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1>My articles</h1>
+          <p>Everything you're working on, by stage.</p>
+        </div>
+        <button id="new-article-button" type="button" class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New article
+        </button>
       </div>
 
-      <form id="new-article-form" hidden>
+      <form id="new-article-form" class="panel new-article" hidden>
         <label for="new-article-title">Title</label>
-        <input id="new-article-title" type="text" required />
+        <input class="field" id="new-article-title" type="text" required />
 
         <label for="new-article-category">Category</label>
-        <select id="new-article-category" required>
-          <option value="politics">politics</option>
-          <option value="business">business</option>
-          <option value="technology">technology</option>
-          <option value="science">science</option>
-          <option value="health">health</option>
-          <option value="sports">sports</option>
-          <option value="entertainment">entertainment</option>
-          <option value="world">world</option>
-          <option value="opinion">opinion</option>
-          <option value="culture">culture</option>
-        </select>
-
-        <button type="submit">Create</button>
-        <p id="new-article-error" role="alert" hidden></p>
-      </form>
-
-      <section id="article-groups" aria-label="My articles"></section>
-
-      <section id="article-editor" class="article-editor" hidden>
-        <button id="close-editor-button" type="button">&larr; Back to list</button>
-        <p id="editor-banner" class="banner" hidden></p>
-        <p id="editor-note" class="note" hidden></p>
-
-        <form id="article-form">
-          <label for="field-title">Title</label>
-          <input id="field-title" type="text" />
-
-          <label for="field-category">Category</label>
-          <select id="field-category">
+        <select class="field" id="new-article-category" required>
             <option value="politics">politics</option>
             <option value="business">business</option>
             <option value="technology">technology</option>
@@ -70,25 +41,61 @@
             <option value="world">world</option>
             <option value="opinion">opinion</option>
             <option value="culture">culture</option>
-          </select>
+        </select>
 
-          <label for="field-abstract">Abstract</label>
-          <textarea id="field-abstract" rows="2"></textarea>
+        <button type="submit" class="btn btn-primary">Create</button>
+        <p id="new-article-error" class="note" role="alert" hidden></p>
+      </form>
 
-          <label for="field-image">Image URL</label>
-          <input id="field-image" type="text" />
-
-          <label for="field-body">Body</label>
-          <textarea id="field-body" rows="16"></textarea>
-
-          <div class="editor-footer">
-            <span id="save-status" aria-live="polite"></span>
-            <button id="submit-button" type="button">Submit for approval</button>
-          </div>
-          <p id="submit-error" role="alert" hidden></p>
-        </form>
-      </section>
+      <section id="article-groups" class="board" aria-label="My articles"></section>
     </main>
+
+    <div class="scrim" id="editor-scrim" hidden></div>
+    <aside id="article-editor" class="drawer article-editor" role="dialog" aria-modal="true" aria-labelledby="editor-heading" hidden>
+      <div class="drawer-head">
+        <h2 id="editor-heading" class="drawer-title">Edit article</h2>
+        <button id="close-editor-button" type="button" class="icon-btn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <form id="article-form" class="drawer-body">
+        <p id="editor-banner" class="banner" hidden></p>
+        <p id="editor-note" class="note" hidden></p>
+
+        <label for="field-title">Title</label>
+        <input class="field" id="field-title" type="text" />
+
+        <label for="field-category">Category</label>
+        <select class="field" id="field-category">
+            <option value="politics">politics</option>
+            <option value="business">business</option>
+            <option value="technology">technology</option>
+            <option value="science">science</option>
+            <option value="health">health</option>
+            <option value="sports">sports</option>
+            <option value="entertainment">entertainment</option>
+            <option value="world">world</option>
+            <option value="opinion">opinion</option>
+            <option value="culture">culture</option>
+        </select>
+
+        <label for="field-abstract">Abstract</label>
+        <textarea class="field" id="field-abstract" rows="2"></textarea>
+
+        <label for="field-image">Image URL</label>
+        <input class="field" id="field-image" type="text" />
+
+        <label for="field-body">Body</label>
+        <textarea class="field" id="field-body" rows="16"></textarea>
+
+        <div class="editor-footer">
+          <span id="save-status" aria-live="polite"></span>
+          <button id="submit-button" type="button" class="btn btn-primary">Submit for approval</button>
+        </div>
+        <p id="submit-error" class="note" role="alert" hidden></p>
+      </form>
+    </aside>
   </div>
 
   <script type="module" src="/js/newsroom-reporter.js"></script>

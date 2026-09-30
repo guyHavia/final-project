@@ -1,19 +1,13 @@
-import { apiRequest, me, logout } from './auth-client.js';
+import { apiRequest, me } from './auth-client.js';
+import { STATE_META, initShell, agoLabel } from './shell.js';
 import { createSaveIndicator } from './save-indicator.js';
 
 // Read-only once submitted; the article is locked until an editor acts on it.
 const LOCKED_STATE = 'Pending Editor Approval';
 const STATE_ORDER = ['Returned for Corrections', 'In Preparation', 'Pending Editor Approval', 'Published'];
-const STATE_LABELS = {
-  'In Preparation': 'In preparation',
-  'Pending Editor Approval': 'Pending editor approval',
-  Published: 'Published',
-  'Returned for Corrections': 'Returned for corrections',
-};
 
 const els = {
-  userName: document.getElementById('user-display-name'),
-  logoutButton: document.getElementById('logout-button'),
+  scrim: document.getElementById('editor-scrim'),
   groups: document.getElementById('article-groups'),
   newButton: document.getElementById('new-article-button'),
   newForm: document.getElementById('new-article-form'),
@@ -60,6 +54,7 @@ function renderSaveStatus({ state, savedAt, errorMessage }) {
     els.saveStatus.textContent = `Not saved (${errorMessage}) — `;
     const retry = document.createElement('button');
     retry.type = 'button';
+    retry.className = 'link-btn';
     retry.textContent = 'retry';
     retry.addEventListener('click', () => indicator.retry());
     els.saveStatus.append(retry);
@@ -101,46 +96,66 @@ function renderGroups() {
   for (const item of myArticles) byState.get(item.state)?.push(item);
 
   els.groups.innerHTML = '';
+  if (myArticles.length === 0) {
+    els.groups.className = '';
+    els.groups.innerHTML = '<div class="empty"><b>No articles yet</b>Start your first one with “New article”.</div>';
+    return;
+  }
+  els.groups.className = 'board';
+
   for (const state of STATE_ORDER) {
     const articles = byState.get(state);
-    if (articles.length === 0) continue;
+    const { key, label } = STATE_META[state];
 
     const section = document.createElement('section');
-    section.className = 'article-group';
+    section.className = 'article-group col';
     const heading = document.createElement('h2');
-    heading.textContent = `${STATE_LABELS[state]} (${articles.length})`;
+    heading.innerHTML = `<span class="badge b-${key}"></span><span class="count"></span>`;
+    heading.querySelector('.badge').textContent = label;
+    heading.querySelector('.count').textContent = String(articles.length);
     section.append(heading);
 
-    const list = document.createElement('ul');
+    if (articles.length === 0) {
+      const none = document.createElement('p');
+      none.className = 'muted';
+      none.textContent = 'Nothing here.';
+      section.append(none);
+    }
+
     for (const article of articles) {
-      const li = document.createElement('li');
+      const card = document.createElement('div');
+      card.className = `mini cat-${article.category}`;
+
+      const cat = document.createElement('span');
+      cat.className = `cat cat-${article.category}`;
+      cat.textContent = article.category;
+
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'article-row';
       button.textContent = article.title || '(untitled)';
-      if (state === 'Returned for Corrections') {
-        const flag = document.createElement('span');
-        flag.className = 'note-flag';
-        flag.textContent = ' — editor note waiting';
-        button.append(flag);
-      }
       button.addEventListener('click', () => openArticle(article.id));
-      li.append(button);
-      list.append(li);
-    }
-    section.append(list);
-    els.groups.append(section);
-  }
 
-  if (myArticles.length === 0) {
-    els.groups.innerHTML = '<p>No articles yet — start your first one.</p>';
-    return;
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      meta.textContent = `Edited ${agoLabel(article.updatedAt)}`;
+
+      card.append(cat, button, meta);
+      if (state === 'Returned for Corrections') {
+        const flag = document.createElement('div');
+        flag.className = 'note-flag';
+        flag.textContent = article.editorNote ? `Editor note: ${article.editorNote}` : 'Editor note waiting';
+        card.append(flag);
+      }
+      section.append(card);
+    }
+    els.groups.append(section);
   }
 
   if (myArticlesCursor) {
     const loadMore = document.createElement('button');
     loadMore.type = 'button';
-    loadMore.className = 'load-more-button';
+    loadMore.className = 'btn btn-ghost load-more-button';
     loadMore.textContent = 'Load more';
     loadMore.addEventListener('click', loadMoreArticles);
     els.groups.append(loadMore);
@@ -182,13 +197,15 @@ async function openArticle(id) {
   renderSaveStatus({ state: 'idle' });
 
   els.editorPanel.hidden = false;
-  els.editorPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  els.scrim.hidden = false;
+  els.closeEditorButton.focus();
 }
 
 function closeEditor() {
   currentArticleId = null;
   indicator = null;
   els.editorPanel.hidden = true;
+  els.scrim.hidden = true;
 }
 
 async function handleSubmitForApproval() {
@@ -223,9 +240,9 @@ async function handleCreateArticle(event) {
 }
 
 function wireStaticControls() {
-  els.logoutButton.addEventListener('click', async () => {
-    await logout();
-    window.location.href = '/login';
+  els.scrim.addEventListener('click', closeEditor);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !els.editorPanel.hidden) closeEditor();
   });
 
   els.newButton.addEventListener('click', () => {
@@ -254,7 +271,7 @@ async function bootstrap() {
     window.location.href = '/login';
     return;
   }
-  els.userName.textContent = user.displayName;
+  initShell(user);
   wireStaticControls();
   await loadGroups();
 }
