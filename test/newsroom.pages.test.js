@@ -102,6 +102,32 @@ describe('GET /newsroom/review', () => {
   });
 });
 
+describe('review panel comment moderation (#56)', () => {
+  test('review shell has a comments section with list, status and load-more', async () => {
+    const cookie = await cookieFor('ed1');
+    const res = await request(app).get('/newsroom/review').set('Cookie', cookie);
+    assert.match(res.text, /id="comments-section"/);
+    assert.match(res.text, /id="comments-list"/);
+    assert.match(res.text, /id="comments-status"[^>]*aria-live="polite"/);
+    assert.match(res.text, /id="comments-more"/);
+  });
+
+  test('newsroom-comments.js is served, uses the comment endpoints, and never writes HTML', async () => {
+    const res = await request(app).get('/js/newsroom-comments.js');
+    assert.equal(res.status, 200);
+    assert.match(res.text, /\/comments\?/);
+    assert.match(res.text, /\/comments\/\$\{[^}]+\}`,\s*\{\s*method: 'DELETE'/);
+    assert.match(res.text, /confirm\(/);
+    assert.match(res.text, /textContent/);
+    assert.doesNotMatch(res.text, /innerHTML|insertAdjacentHTML|outerHTML/);
+  });
+
+  test('editor.js hooks the comments module into the review panel', async () => {
+    const res = await request(app).get('/js/newsroom-editor.js');
+    assert.match(res.text, /from '\.\/newsroom-comments\.js'/);
+  });
+});
+
 describe('GET /newsroom/analytics', () => {
   test('renders the analytics shell for an editor session', async () => {
     const cookie = await cookieFor('ed1');

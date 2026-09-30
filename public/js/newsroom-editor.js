@@ -1,5 +1,6 @@
 import { apiRequest, me } from './auth-client.js';
 import { diffLines } from './line-diff.js';
+import { showComments, resetComments } from './newsroom-comments.js';
 import { STATE_META, initShell, initials, avatarColor, timeAgo, agoLabel, hoursSince } from './shell.js';
 
 const STATE_ORDER = ['Pending Editor Approval', 'Returned for Corrections', 'In Preparation', 'Published'];
@@ -332,6 +333,7 @@ async function openReview(id) {
   els.panel.hidden = false;
   els.scrim.hidden = false;
   els.closeButton.focus();
+  showComments(article.id);
 }
 
 function renderReviewHeader(article) {
@@ -343,6 +345,7 @@ function renderReviewHeader(article) {
 
 function closeReview() {
   currentArticle = null;
+  resetComments();
   els.panel.hidden = true;
   els.scrim.hidden = true;
 }

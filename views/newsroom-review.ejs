@@ -106,6 +106,13 @@
           <label class="field-label" for="return-note">Editor note — required to return for corrections</label>
           <textarea id="return-note" class="field" placeholder="What should the reporter fix?"></textarea>
         </div>
+
+        <section id="comments-section" class="comments-section" aria-labelledby="comments-heading">
+          <h3 id="comments-heading" tabindex="-1">Comments</h3>
+          <p id="comments-status" class="muted" role="status" aria-live="polite"></p>
+          <ul id="comments-list" class="comments-list"></ul>
+          <button id="comments-more" type="button" class="btn btn-ghost btn-sm" hidden>Load more comments</button>
+        </section>
       </div>
 
       <div id="action-bar" class="drawer-foot action-bar">
