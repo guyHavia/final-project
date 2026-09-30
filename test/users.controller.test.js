@@ -34,7 +34,7 @@ async function seedUser(username, role = 'reporter') {
 
 /** A supertest agent (cookie jar) logged in as `username`. */
 async function loginAs(username) {
-  const agent = request.agent(app);
+  const agent = request.agent(app).set('Sec-Fetch-Site', 'same-origin');
   const res = await agent.post('/api/auth/login').send({ username, password: PASSWORD });
   assert.equal(res.status, 200);
   return agent;

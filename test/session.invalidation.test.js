@@ -30,7 +30,7 @@ beforeEach(async () => {
 const seed = (username, role) => createUser({ username, password: PASSWORD, role, displayName: username });
 
 async function loginAs(username) {
-  const agent = request.agent(app);
+  const agent = request.agent(app).set('Sec-Fetch-Site', 'same-origin');
   const res = await agent.post('/api/auth/login').send({ username, password: PASSWORD });
   assert.equal(res.status, 200);
   return agent;
@@ -42,7 +42,7 @@ const status = async (agent, path = '/api/auth/me') => (await agent.get(path)).s
 describe('login regenerates the session id', () => {
   test('re-login on the same jar issues a new session id and the session works', async () => {
     await seed('rep', 'reporter');
-    const agent = request.agent(app);
+    const agent = request.agent(app).set('Sec-Fetch-Site', 'same-origin');
     const first = await agent.post('/api/auth/login').send({ username: 'rep', password: PASSWORD });
     const second = await agent.post('/api/auth/login').send({ username: 'rep', password: PASSWORD });
     assert.ok(sidOf(first) && sidOf(second));
@@ -54,11 +54,11 @@ describe('login regenerates the session id', () => {
 
   test('the pre-login session id no longer works afterwards', async () => {
     await seed('rep', 'reporter');
-    const agent = request.agent(app);
+    const agent = request.agent(app).set('Sec-Fetch-Site', 'same-origin');
     const first = await agent.post('/api/auth/login').send({ username: 'rep', password: PASSWORD });
     const oldCookie = first.headers['set-cookie'];
     await agent.post('/api/auth/login').send({ username: 'rep', password: PASSWORD });
-    const stale = await request(app).get('/api/auth/me').set('Cookie', oldCookie);
+    const stale = await request(app).get('/api/auth/me').set('Cookie', oldCookie).set('Sec-Fetch-Site', 'same-origin');
     assert.equal(stale.status, 401);
   });
 });
