@@ -1,18 +1,25 @@
-import { apiRequest, me, logout } from './auth-client.js';
+import { apiRequest, me } from './auth-client.js';
 import { diffLines } from './line-diff.js';
+import { STATE_META, initShell, initials, avatarColor, timeAgo, agoLabel, hoursSince } from './shell.js';
 
 const STATE_ORDER = ['Pending Editor Approval', 'Returned for Corrections', 'In Preparation', 'Published'];
-const STATE_LABELS = {
-  'In Preparation': 'In preparation',
-  'Pending Editor Approval': 'Pending editor approval',
-  Published: 'Published',
-  'Returned for Corrections': 'Returned for corrections',
+const STAT_CAPTIONS = {
+  'Pending Editor Approval': 'awaiting review',
+  'Returned for Corrections': 'with reporters',
+  'In Preparation': 'being written',
+  Published: 'live on the site',
 };
 const COMPARE_FIELDS = ['title', 'category', 'abstract', 'image'];
 
 const els = {
-  userName: document.getElementById('user-display-name'),
-  logoutButton: document.getElementById('logout-button'),
+  stats: document.getElementById('queue-stats'),
+  search: document.getElementById('queue-search'),
+  categoryFilter: document.getElementById('queue-category'),
+  scrim: document.getElementById('review-scrim'),
+  reviewTitle: document.getElementById('review-title'),
+  reviewBadges: document.getElementById('review-badges'),
+  reviewMeta: document.getElementById('review-meta'),
+  returnWrap: document.getElementById('return-note-wrap'),
   groups: document.getElementById('article-groups'),
   panel: document.getElementById('review-panel'),
   closeButton: document.getElementById('close-review-button'),
@@ -40,6 +47,8 @@ let currentArticle = null;
 // Each state is its own cursor-paginated query (GET /api/articles?state=...),
 // so "load more" is per group: { items, nextCursor } keyed by state.
 let queueByState = new Map();
+// The queue shows one state at a time; the stat cards double as the switcher.
+let activeState = 'Pending Editor Approval';
 
 async function fetchStatePage(state) {
   return apiRequest(`/articles?state=${encodeURIComponent(state)}`);
@@ -60,48 +69,168 @@ async function loadMoreForState(state) {
   renderGroups();
 }
 
-function renderGroups() {
-  els.groups.innerHTML = '';
+function countLabel(state) {
+  const { items, nextCursor } = queueByState.get(state);
+  return `${items.length}${nextCursor ? '+' : ''}`;
+}
+
+function renderStats() {
+  els.stats.innerHTML = '';
   for (const state of STATE_ORDER) {
-    const { items: articles, nextCursor } = queueByState.get(state);
-    const section = document.createElement('section');
-    section.className = 'article-group';
-    const heading = document.createElement('h2');
-    heading.textContent = `${STATE_LABELS[state]} (${articles.length}${nextCursor ? '+' : ''})`;
-    section.append(heading);
-
-    if (articles.length > 0) {
-      const list = document.createElement('ul');
-      for (const article of articles) {
-        const li = document.createElement('li');
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'article-row';
-        button.textContent = `${article.title || '(untitled)'} — ${article.author.displayName}`;
-        if (article.hasUnsubmittedChanges) {
-          const flag = document.createElement('span');
-          flag.className = 'note-flag';
-          flag.textContent = ' (unsubmitted edits)';
-          button.append(flag);
-        }
-        button.addEventListener('click', () => openReview(article.id));
-        li.append(button);
-        list.append(li);
-      }
-      section.append(list);
-    }
-
-    if (nextCursor) {
-      const loadMore = document.createElement('button');
-      loadMore.type = 'button';
-      loadMore.className = 'load-more-button';
-      loadMore.textContent = 'Load more';
-      loadMore.addEventListener('click', () => loadMoreForState(state));
-      section.append(loadMore);
-    }
-
-    els.groups.append(section);
+    const { key, label } = STATE_META[state];
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `stat stat-${key}`;
+    button.setAttribute('aria-pressed', String(state === activeState));
+    button.innerHTML = `<span class="n">${countLabel(state)}</span><span class="l">${label}</span><span class="d">${STAT_CAPTIONS[state]}</span>`;
+    button.addEventListener('click', () => {
+      activeState = state;
+      renderGroups();
+    });
+    els.stats.append(button);
   }
+}
+
+function makeBadge(state) {
+  const { key, label } = STATE_META[state];
+  const badge = document.createElement('span');
+  badge.className = `badge b-${key}`;
+  badge.textContent = label;
+  return badge;
+}
+
+function makeCategory(category) {
+  const cat = document.createElement('span');
+  cat.className = `cat cat-${category}`;
+  cat.textContent = category;
+  return cat;
+}
+
+function makeAvatar(name) {
+  const avatar = document.createElement('span');
+  avatar.className = 'avatar avatar-sm';
+  avatar.style.background = avatarColor(name);
+  avatar.textContent = initials(name);
+  avatar.setAttribute('aria-hidden', 'true');
+  return avatar;
+}
+
+function makeCard(article) {
+  const isPending = article.state === 'Pending Editor Approval';
+  const card = document.createElement('article');
+  card.className = 'card';
+
+  const thumb = document.createElement('div');
+  thumb.className = `thumb cat-${article.category}`;
+  thumb.setAttribute('aria-hidden', 'true');
+  thumb.textContent = (article.category || '?')[0].toUpperCase();
+
+  const main = document.createElement('div');
+  const tags = document.createElement('div');
+  tags.className = 'meta';
+  tags.append(makeCategory(article.category), makeBadge(article.state));
+  if (isPending && article.hasPublishedVersion) {
+    const update = document.createElement('span');
+    update.className = 'badge b-prep';
+    update.textContent = 'Update to live story';
+    tags.append(update);
+  }
+  if (article.hasUnsubmittedChanges) {
+    const flag = document.createElement('span');
+    flag.className = 'note-flag';
+    flag.textContent = 'unsubmitted edits';
+    tags.append(flag);
+  }
+
+  const heading = document.createElement('h3');
+  const titleButton = document.createElement('button');
+  titleButton.type = 'button';
+  titleButton.className = 'article-row';
+  titleButton.textContent = article.title || '(untitled)';
+  titleButton.addEventListener('click', () => openReview(article.id));
+  heading.append(titleButton);
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const byline = document.createElement('span');
+  byline.textContent = article.author.displayName;
+  meta.append(makeAvatar(article.author.displayName), byline);
+  if (isPending) {
+    const waited = hoursSince(article.submittedAt);
+    const wait = document.createElement('span');
+    wait.className = `wait${waited > 48 ? ' hot' : waited > 24 ? ' warm' : ''}`;
+    wait.textContent = timeAgo(article.submittedAt);
+    const waiting = document.createElement('span');
+    waiting.append('waiting ', wait);
+    meta.append(waiting);
+  } else {
+    const when = document.createElement('span');
+    when.textContent = agoLabel(article.updatedAt);
+    meta.append(when);
+  }
+  main.append(tags, heading, meta);
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  if (isPending) {
+    const approve = document.createElement('button');
+    approve.type = 'button';
+    approve.className = 'btn btn-success btn-sm';
+    approve.textContent = '✓ Approve';
+    approve.addEventListener('click', () => quickApprove(article.id));
+    actions.append(approve);
+  }
+  const review = document.createElement('button');
+  review.type = 'button';
+  review.className = 'btn btn-ghost btn-sm';
+  review.textContent = isPending ? 'Review' : 'View';
+  review.addEventListener('click', () => openReview(article.id));
+  actions.append(review);
+
+  card.append(thumb, main, actions);
+  return card;
+}
+
+function matchesFilters(article) {
+  const query = els.search.value.trim().toLowerCase();
+  if (query && !(article.title || '').toLowerCase().includes(query)) return false;
+  return !els.categoryFilter.value || article.category === els.categoryFilter.value;
+}
+
+function sortedByWaiting(articles) {
+  const at = (a) => new Date(a.submittedAt ?? a.updatedAt).getTime();
+  return [...articles].sort((a, b) => at(a) - at(b));
+}
+
+function renderGroups() {
+  renderStats();
+  els.groups.innerHTML = '';
+  const { items, nextCursor } = queueByState.get(activeState);
+  const visible = sortedByWaiting(items.filter(matchesFilters));
+
+  if (visible.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'empty';
+    empty.innerHTML = '<b>Nothing here</b>No articles match this state and filter.';
+    els.groups.append(empty);
+  }
+  for (const article of visible) els.groups.append(makeCard(article));
+
+  if (nextCursor) {
+    const loadMore = document.createElement('button');
+    loadMore.type = 'button';
+    loadMore.className = 'btn btn-ghost load-more-button';
+    loadMore.textContent = 'Load more';
+    loadMore.addEventListener('click', () => loadMoreForState(activeState));
+    els.groups.append(loadMore);
+  }
+}
+
+async function quickApprove(id) {
+  await withActionErrorHandling(async () => {
+    await apiRequest(`/articles/${id}/approve`, { method: 'POST' });
+    await loadGroups();
+  });
 }
 
 function fieldLabel(field) {
@@ -161,7 +290,7 @@ function escapeHtml(value) {
 function renderActionBar(article) {
   const isPending = article.state === 'Pending Editor Approval';
   els.approveButton.hidden = !isPending;
-  els.returnNote.hidden = !isPending;
+  els.returnWrap.hidden = !isPending;
   els.returnButton.hidden = !isPending;
   els.returnNote.value = '';
   els.returnButton.disabled = true;
@@ -199,13 +328,23 @@ async function openReview(id) {
   renderCompareFields(article);
   renderCompareBody(article);
   renderActionBar(article);
+  renderReviewHeader(article);
   els.panel.hidden = false;
-  els.panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  els.scrim.hidden = false;
+  els.closeButton.focus();
+}
+
+function renderReviewHeader(article) {
+  els.reviewTitle.textContent = article.title || '(untitled)';
+  els.reviewBadges.replaceChildren(makeCategory(article.category), makeBadge(article.state));
+  const name = article.author?.displayName ?? '';
+  els.reviewMeta.replaceChildren(makeAvatar(name), document.createTextNode(name));
 }
 
 function closeReview() {
   currentArticle = null;
   els.panel.hidden = true;
+  els.scrim.hidden = true;
 }
 
 async function withActionErrorHandling(action) {
@@ -262,9 +401,11 @@ async function handleEditSave(event) {
 }
 
 function wireStaticControls() {
-  els.logoutButton.addEventListener('click', async () => {
-    await logout();
-    window.location.href = '/login';
+  els.search.addEventListener('input', renderGroups);
+  els.categoryFilter.addEventListener('change', renderGroups);
+  els.scrim.addEventListener('click', closeReview);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !els.panel.hidden) closeReview();
   });
 
   els.closeButton.addEventListener('click', closeReview);
@@ -289,7 +430,7 @@ async function bootstrap() {
     window.location.href = '/login';
     return;
   }
-  els.userName.textContent = user.displayName;
+  initShell(user);
   wireStaticControls();
   await loadGroups();
 }

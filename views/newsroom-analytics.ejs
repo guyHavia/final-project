@@ -12,41 +12,53 @@
     value below is filled in by public/js/analytics.js after load.
   -->
   <div data-screen="newsroom-analytics">
-    <header class="newsroom-header">
-      <h1>The Daily Web — Impact Analytics</h1>
-      <div class="header-user">
-        <span id="user-display-name"></span>
-        <a href="/newsroom/review">Newsroom review</a>
-        <button id="logout-button" type="button">Log out</button>
-      </div>
-    </header>
+    <%- include('partials/header', { screen: 'analytics' }) %>
 
-    <main class="analytics-main">
-      <div class="article-picker">
-        <label for="article-search">Article</label>
-        <input id="article-search" type="text" placeholder="Search published articles…" autocomplete="off" />
-        <ul id="article-results" class="search-results"></ul>
-        <p id="selected-article-title" class="selected-title"></p>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1>Impact Analytics</h1>
+          <p>See how an update changed reader attention.</p>
+        </div>
       </div>
 
-      <div class="range-controls">
-        <label for="bucket-select">Bucket</label>
-        <select id="bucket-select">
-          <option value="hour">Hourly</option>
-          <option value="day">Daily</option>
-        </select>
+      <div class="an-grid">
+        <section class="panel article-picker" aria-label="Choose article">
+          <label class="field-label" for="article-search">Article</label>
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input class="field" id="article-search" type="search" placeholder="Search published articles…" autocomplete="off" />
+          </div>
+          <ul id="article-results" class="search-results"></ul>
+        </section>
 
-        <label for="range-from">From</label>
-        <input id="range-from" type="datetime-local" />
+        <section class="panel" aria-label="Views over time">
+          <h2 id="selected-article-title" class="selected-title">Pick an article</h2>
 
-        <label for="range-to">To</label>
-        <input id="range-to" type="datetime-local" />
+          <div class="range-controls">
+            <div>
+              <label for="bucket-select">Bucket</label>
+              <select class="field" id="bucket-select">
+                <option value="hour">Hourly</option>
+                <option value="day">Daily</option>
+              </select>
+            </div>
+            <div>
+              <label for="range-from">From</label>
+              <input class="field" id="range-from" type="datetime-local" />
+            </div>
+            <div>
+              <label for="range-to">To</label>
+              <input class="field" id="range-to" type="datetime-local" />
+            </div>
+          </div>
+
+          <div id="chart-area" class="chart-area" hidden>
+            <canvas id="views-chart"></canvas>
+          </div>
+          <p id="empty-message" class="muted" hidden>No views recorded in this range.</p>
+        </section>
       </div>
-
-      <div id="chart-area" class="chart-area" hidden>
-        <canvas id="views-chart"></canvas>
-      </div>
-      <p id="empty-message" hidden>No views recorded in this range.</p>
     </main>
   </div>
 

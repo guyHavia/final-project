@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Newsroom review — The Daily Web</title>
+  <title>Newsroom queue — The Daily Web</title>
   <link rel="stylesheet" href="/css/newsroom.css" />
 </head>
 <body>
@@ -12,22 +12,59 @@
     below is filled in by public/js/newsroom-editor.js after load.
   -->
   <div data-screen="newsroom-editor">
-    <header class="newsroom-header">
-      <h1>The Daily Web — Newsroom review</h1>
-      <div class="header-user">
-        <span id="user-display-name"></span>
-        <a href="/newsroom/analytics">Impact Analytics</a>
-        <button id="logout-button" type="button">Log out</button>
+    <%- include('partials/header', { screen: 'editor' }) %>
+
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1>Newsroom queue</h1>
+          <p>Review what reporters submitted. Longest waiting first.</p>
+        </div>
       </div>
-    </header>
 
-    <main class="editor-main">
-      <section id="article-groups" aria-label="Newsroom queue"></section>
+      <div id="queue-stats" class="stats" role="group" aria-label="Filter by state"></div>
 
-      <section id="review-panel" class="review-panel" hidden>
-        <button id="close-review-button" type="button">&larr; Back to queue</button>
-        <button id="compare-toggle" type="button">Show pending only</button>
-        <p id="action-error" role="alert" hidden></p>
+      <div class="toolbar">
+        <div class="search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <label class="sr" for="queue-search">Search loaded articles by title</label>
+          <input class="field" id="queue-search" type="search" placeholder="Search by title…" autocomplete="off" />
+        </div>
+        <label class="sr" for="queue-category">Category</label>
+        <select class="field" id="queue-category">
+          <option value="">All categories</option>
+          <option value="politics">politics</option>
+          <option value="business">business</option>
+          <option value="technology">technology</option>
+          <option value="science">science</option>
+          <option value="health">health</option>
+          <option value="sports">sports</option>
+          <option value="entertainment">entertainment</option>
+          <option value="world">world</option>
+          <option value="opinion">opinion</option>
+          <option value="culture">culture</option>
+        </select>
+      </div>
+
+      <section id="article-groups" class="queue" aria-label="Newsroom queue" aria-live="polite"></section>
+    </main>
+
+    <div class="scrim" id="review-scrim" hidden></div>
+    <aside id="review-panel" class="drawer review-panel" role="dialog" aria-modal="true" aria-labelledby="review-title" hidden>
+      <div class="drawer-head">
+        <div class="drawer-title">
+          <div id="review-badges" class="meta"></div>
+          <h2 id="review-title"></h2>
+          <div id="review-meta" class="meta"></div>
+        </div>
+        <button id="close-review-button" type="button" class="icon-btn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+
+      <div class="drawer-body">
+        <button id="compare-toggle" type="button" class="btn btn-ghost btn-sm">Show pending only</button>
+        <p id="action-error" class="note" role="alert" hidden></p>
 
         <div class="compare-header">
           <span></span>
@@ -39,9 +76,9 @@
 
         <form id="edit-form" hidden>
           <label for="edit-title">Title</label>
-          <input id="edit-title" type="text" />
+          <input class="field" id="edit-title" type="text" />
           <label for="edit-category">Category</label>
-          <select id="edit-category">
+          <select class="field" id="edit-category">
             <option value="politics">politics</option>
             <option value="business">business</option>
             <option value="technology">technology</option>
@@ -54,27 +91,32 @@
             <option value="culture">culture</option>
           </select>
           <label for="edit-abstract">Abstract</label>
-          <textarea id="edit-abstract" rows="2"></textarea>
+          <textarea class="field" id="edit-abstract" rows="2"></textarea>
           <label for="edit-image">Image URL</label>
-          <input id="edit-image" type="text" />
+          <input class="field" id="edit-image" type="text" />
           <label for="edit-body">Body</label>
-          <textarea id="edit-body" rows="14"></textarea>
+          <textarea class="field" id="edit-body" rows="14"></textarea>
           <div class="edit-form-actions">
-            <button id="edit-save-button" type="submit">Save changes</button>
-            <button id="edit-cancel-button" type="button">Cancel</button>
+            <button id="edit-save-button" type="submit" class="btn btn-primary">Save changes</button>
+            <button id="edit-cancel-button" type="button" class="btn btn-ghost">Cancel</button>
           </div>
         </form>
 
-        <div id="action-bar" class="action-bar">
-          <button id="approve-button" type="button" hidden>Approve and publish</button>
-          <textarea id="return-note" placeholder="Note explaining what needs fixing…" hidden></textarea>
-          <button id="return-button" type="button" hidden disabled>Return for corrections</button>
-          <button id="edit-button" type="button">Edit</button>
-          <a id="analytics-link" href="#" hidden>View Impact Analytics</a>
-          <button id="delete-button" type="button" class="danger">Delete</button>
+        <div id="return-note-wrap" hidden>
+          <label class="field-label" for="return-note">Editor note — required to return for corrections</label>
+          <textarea id="return-note" class="field" placeholder="What should the reporter fix?"></textarea>
         </div>
-      </section>
-    </main>
+      </div>
+
+      <div id="action-bar" class="drawer-foot action-bar">
+        <button id="delete-button" type="button" class="btn btn-ghost danger">Delete</button>
+        <span class="spacer"></span>
+        <a id="analytics-link" class="btn btn-ghost" href="#" hidden>Impact Analytics</a>
+        <button id="edit-button" type="button" class="btn btn-ghost">Edit</button>
+        <button id="return-button" type="button" class="btn btn-warn" hidden disabled>Return for corrections</button>
+        <button id="approve-button" type="button" class="btn btn-success" hidden>Approve &amp; publish</button>
+      </div>
+    </aside>
   </div>
 
   <script type="module" src="/js/newsroom-editor.js"></script>

@@ -1,8 +1,7 @@
-import { apiRequest, me, logout } from './auth-client.js';
+import { apiRequest, me } from './auth-client.js';
+import { initShell } from './shell.js';
 
 const els = {
-  userName: document.getElementById('user-display-name'),
-  logoutButton: document.getElementById('logout-button'),
   search: document.getElementById('article-search'),
   results: document.getElementById('article-results'),
   selectedTitle: document.getElementById('selected-article-title'),
@@ -14,7 +13,8 @@ const els = {
   chartArea: document.getElementById('chart-area'),
 };
 
-const MARKER_COLORS = { publish: '#16a34a', update: '#d97706' };
+const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const markerColor = (kind) => cssVar(kind === 'publish' ? '--st-pub' : '--st-pend') || '#666';
 const MIN_LABEL_SPACING_PX = 70;
 
 let chart = null;
@@ -73,7 +73,7 @@ const markerPlugin = {
 
     ctx.save();
     visible.forEach(({ x, marker }, i) => {
-      const color = MARKER_COLORS[marker.kind] || '#666';
+      const color = markerColor(marker.kind);
       ctx.strokeStyle = color;
       ctx.setLineDash([4, 4]);
       ctx.lineWidth = 1.5;
@@ -99,6 +99,9 @@ function drawChart({ series, markers, bucket }) {
   const padding = step / 2;
 
   if (chart) chart.destroy();
+  const line = cssVar('--st-prep');
+  const gridColor = cssVar('--line');
+  const textColor = cssVar('--ink-2');
   // eslint-disable-next-line no-undef -- Chart is a global from the vendored public/vendor/chart.js
   chart = new Chart(els.canvas, {
     type: 'line',
@@ -107,8 +110,8 @@ function drawChart({ series, markers, bucket }) {
         {
           label: 'Views',
           data: points,
-          borderColor: '#1a56db',
-          backgroundColor: 'rgba(26, 86, 219, 0.1)',
+          borderColor: line,
+          backgroundColor: `${line}26`,
           fill: true,
           tension: 0.15,
           pointRadius: 2,
@@ -123,10 +126,11 @@ function drawChart({ series, markers, bucket }) {
           type: 'linear',
           min: points.length ? points[0].x - padding : undefined,
           max: points.length ? points[points.length - 1].x + padding : undefined,
-          ticks: { callback: (value) => formatTick(value, bucket) },
-          title: { display: true, text: 'Time' },
+          ticks: { color: textColor, callback: (value) => formatTick(value, bucket) },
+          grid: { color: gridColor },
+          title: { display: true, text: 'Time', color: textColor },
         },
-        y: { beginAtZero: true, title: { display: true, text: 'Views' } },
+        y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: gridColor }, title: { display: true, text: 'Views', color: textColor } },
       },
       plugins: { legend: { display: false } },
     },
@@ -180,11 +184,6 @@ async function runSearch(query) {
 }
 
 function wireControls() {
-  els.logoutButton.addEventListener('click', async () => {
-    await logout();
-    window.location.href = '/login';
-  });
-
   els.search.addEventListener('input', () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => runSearch(els.search.value.trim()), 300);
@@ -212,7 +211,7 @@ async function bootstrap() {
     window.location.href = '/login';
     return;
   }
-  els.userName.textContent = user.displayName;
+  initShell(user);
 
   const now = new Date();
   els.to.value = toDatetimeLocalValue(now);

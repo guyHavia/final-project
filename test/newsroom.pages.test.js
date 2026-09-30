@@ -117,3 +117,21 @@ describe('GET /newsroom/analytics', () => {
     assert.equal(res.headers.location, '/newsroom');
   });
 });
+
+describe('shared newsroom header', () => {
+  test('editor pages get the side menu with Queue and Impact Analytics, current page marked', async () => {
+    const cookie = await cookieFor('ed1');
+    const res = await request(app).get('/newsroom/analytics').set('Cookie', cookie);
+    assert.match(res.text, /id="burger"/);
+    assert.match(res.text, /href="\/newsroom\/review"/);
+    assert.match(res.text, /href="\/newsroom\/analytics" aria-current="page"/);
+    assert.match(res.text, /id="logout-button"/);
+  });
+
+  test('reporter page menu links only to My articles', async () => {
+    const cookie = await cookieFor('rep1');
+    const res = await request(app).get('/newsroom').set('Cookie', cookie);
+    assert.match(res.text, /href="\/newsroom" aria-current="page"/);
+    assert.doesNotMatch(res.text, /Impact Analytics/);
+  });
+});
