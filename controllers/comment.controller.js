@@ -91,6 +91,27 @@ export async function create(req, res) {
     sendData(res, req.comment, 201);
 }
 
+/**
+ * PATCH /api/comments/:id — editor-only moderation edit. Only `body` is editable;
+ * author, article and deviceId are ignored. Goes through `save()` so the schema's
+ * trim/length validation applies (a bad body → 400 validation).
+ */
+export async function update(req, res) {
+    const { body } = req.body ?? {};
+    if (typeof body !== 'string') {
+        throw AppError.badRequest('body is required');
+    }
+
+    const comment = await Comment.findById(req.params.id);
+    if (!comment) {
+        throw AppError.notFound('comment not found');
+    }
+
+    comment.body = body;
+    await comment.save();
+    sendData(res, comment);
+}
+
 export async function remove(req, res) {
     const { id } = req.params;
 

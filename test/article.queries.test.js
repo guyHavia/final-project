@@ -101,6 +101,9 @@ function orderDesc(list, key) {
   });
 }
 
+/** Exactly the reverse of orderDesc: ascending by `key(doc)`, ties by `_id` ascending. */
+const orderAsc = (list, key) => orderDesc(list, key).reverse();
+
 /** Follows `nextCursor` to exhaustion and returns every item plus the page count. */
 async function collect(path, params = {}, cookie) {
   const items = [];
@@ -203,6 +206,32 @@ describe('GET /api/articles — public feed', () => {
   test('sort=popularity orders by viewCount desc with an _id tie-break, across all pages', async () => {
     const { items } = await collect('/api/articles', { sort: 'popularity' });
     assert.deepEqual(items.map((a) => a.id), byViews(publicDocs()).map(idOf));
+  });
+
+  test('order=asc (sort=date) is oldest first and pages to exhaustion with no gaps', async () => {
+    const { items } = await collect('/api/articles', { order: 'asc', limit: 7 });
+    const expected = orderAsc(publicDocs(), (d) => d.firstPublishedAt.getTime()).map(idOf);
+    assert.deepEqual(items.map((a) => a.id), expected);
+  });
+
+  test('order=asc with sort=popularity is least viewed first, across all pages', async () => {
+    const { items } = await collect('/api/articles', { sort: 'popularity', order: 'asc', limit: 9 });
+    assert.deepEqual(items.map((a) => a.id), orderAsc(publicDocs(), (d) => d.viewCount).map(idOf));
+  });
+
+  test('order=desc is the default and matches an omitted order', async () => {
+    const a = await request(app).get('/api/articles?order=desc');
+    const b = await request(app).get('/api/articles');
+    assert.deepEqual(a.body.data, b.body.data);
+  });
+
+  test('a cursor cannot be replayed in the other direction, and an unknown order is a 400', async () => {
+    const asc = await request(app).get('/api/articles?order=asc');
+    const mixed = await request(app).get(`/api/articles?order=desc&cursor=${asc.body.data.nextCursor}`);
+    assert.equal(mixed.status, 400);
+    const defaulted = await request(app).get(`/api/articles?cursor=${asc.body.data.nextCursor}`);
+    assert.equal(defaulted.status, 400);
+    assert.equal((await request(app).get('/api/articles?order=sideways')).status, 400);
   });
 
   test('q is a case-insensitive substring match on the published title only', async () => {

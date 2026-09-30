@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { list, prepare, create, remove } from '../controllers/comment.controller.js';
+import { list, prepare, create, update, remove } from '../controllers/comment.controller.js';
 import { requireRole } from '../middleware/auth.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 import rateLimit, { assignDeviceId } from '../middleware/rateLimit.js';
@@ -22,6 +22,7 @@ router.post(
 );
 
 // Global comment management routes
+router.patch('/comments/:id', requireRole('editor'), asyncHandler(update));
 router.delete('/comments/:id', requireRole('editor'), asyncHandler(remove));
 
 export default router;
