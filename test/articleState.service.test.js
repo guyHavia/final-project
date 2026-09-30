@@ -2,7 +2,7 @@ import { test, describe, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 
-import { canTransition, applyTransition, slugify, saveWithSlugRetry } from '../services/articleState.service.js';
+import { applyTransition, slugify, saveWithSlugRetry } from '../services/articleState.service.js';
 import { AppError } from '../lib/AppError.js';
 import { Article } from '../models/article.model.js';
 import { startMongo } from './support/mongo.js';
@@ -128,6 +128,12 @@ describe('articleState.service', () => {
       assert.equal(article.state, 'Published');
       assert.notEqual(article.slug, '');
       assert.ok(article.slug, 'slug must be a non-empty fallback, not left blank');
+    });
+
+    test('Pending Editor Approval -> Published: a Hebrew title gets a readable unicode slug, not article-<id>', () => {
+      const article = makeArticle({ state: 'Pending Editor Approval', title: 'חדשות מהעולם: הבחירות 2025!', submittedAt: new Date() });
+      applyTransition(article, 'Published', editor('editor-1'));
+      assert.equal(article.slug, 'חדשות-מהעולם-הבחירות-2025');
     });
 
     test('Pending Editor Approval -> Published: a later approval increments version, keeps firstPublishedAt/slug, and pushes "update"', () => {
@@ -319,71 +325,32 @@ describe('articleState.service', () => {
 
     test('the owner can submit when article.author is a populated User object', () => {
       const article = makeArticle({ author: populatedAuthor('reporter-1') });
-      assert.equal(canTransition(article, 'Pending Editor Approval', reporter('reporter-1')), true);
       applyTransition(article, 'Pending Editor Approval', reporter('reporter-1'));
       assert.equal(article.state, 'Pending Editor Approval');
     });
 
     test('a different reporter is still forbidden when article.author is populated', () => {
       const article = makeArticle({ author: populatedAuthor('reporter-1') });
-      assert.equal(canTransition(article, 'Pending Editor Approval', reporter('reporter-2')), false);
       assertAppError(() => applyTransition(article, 'Pending Editor Approval', reporter('reporter-2')), 'forbidden');
     });
   });
 
-  describe('canTransition', () => {
-    test('true for a representative sample of legal (state, actor) combos', () => {
-      assert.equal(
-        canTransition(makeArticle({ state: 'In Preparation' }), 'Pending Editor Approval', reporter()),
-        true,
-      );
-      assert.equal(
-        canTransition(makeArticle({ state: 'In Preparation' }), 'Pending Editor Approval', editor('someone-else')),
-        true,
-      );
-      assert.equal(
-        canTransition(makeArticle({ state: 'Pending Editor Approval' }), 'Published', editor()),
-        true,
-      );
-      assert.equal(
-        canTransition(makeArticle({ state: 'Pending Editor Approval' }), 'Returned for Corrections', editor()),
-        true,
-      );
-      assert.equal(
-        canTransition(makeArticle({ state: 'Published' }), 'Pending Editor Approval', editor()),
-        true,
-      );
-      assert.equal(
-        canTransition(makeArticle({ state: 'Returned for Corrections' }), 'Pending Editor Approval', reporter()),
-        true,
-      );
-    });
-
-    test('false for a representative sample of illegal (state, actor) combos', () => {
-      assert.equal(canTransition(makeArticle({ state: 'In Preparation' }), 'Published', editor()), false);
-      assert.equal(
-        canTransition(makeArticle({ state: 'Pending Editor Approval' }), 'Published', reporter()),
-        false,
-      );
-      assert.equal(
-        canTransition(
-          makeArticle({ state: 'In Preparation', author: 'reporter-2' }),
-          'Pending Editor Approval',
-          reporter('reporter-1'),
-        ),
-        false,
-      );
-      assert.equal(canTransition(makeArticle({ state: 'Published' }), 'In Preparation', editor()), false);
-      assert.equal(canTransition(makeArticle({ state: 'Published' }), 'Published', editor()), false);
-    });
-
-    test('never throws, even for a nonsense "to" value', () => {
-      assert.doesNotThrow(() => canTransition(makeArticle(), 'Not A Real State', editor()));
-      assert.equal(canTransition(makeArticle(), 'Not A Real State', editor()), false);
-    });
-  });
-
   describe('slugify', () => {
+    test('keeps letters and digits of any script, drops punctuation, stays lowercase and dash-separated', () => {
+      assert.equal(slugify('  שלום, עולם!! '), 'שלום-עולם');
+      assert.equal(slugify('Привет Мир'), 'привет-мир');
+      assert.equal(slugify('Über 5 café'), 'über-5-café');
+    });
+
+    test('never emits characters that break a URL path or mongo key', () => {
+      const slug = slugify('a/b?c#d%e\\f g<h>"i');
+      assert.match(slug, /^[\p{L}\p{N}]+(-[\p{L}\p{N}]+)*$/u);
+    });
+
+    test('a title with no letters or digits still slugifies to empty (caller falls back)', () => {
+      assert.equal(slugify('!!! ???'), '');
+    });
+
     test('lowercases, trims, and collapses non-alphanumeric runs to a single dash', () => {
       assert.equal(slugify('  My Great Article!! '), 'my-great-article');
       assert.equal(slugify('Already-slugged'), 'already-slugged');
@@ -530,15 +497,26 @@ describe('articleState.service', () => {
       assert.equal(articleB.slug, `article-${articleB._id}`);
     });
 
-    test('60 non-Latin titles all publish (no retry-limit crash on a shared fallback slug)', async () => {
+    test('60 symbol-only titles all publish (no retry-limit crash on a shared fallback slug)', async () => {
       const slugs = new Set();
       for (let i = 0; i < 60; i += 1) {
-        const article = await makePendingArticle('כותרת בעברית');
+        const article = await makePendingArticle('!!! ???');
         publish(article);
         await saveWithSlugRetry(article);
         slugs.add(article.slug);
       }
       assert.equal(slugs.size, 60);
+    });
+
+    test('same-title Hebrew articles get the readable slug plus the collision suffix', async () => {
+      const articleA = await makePendingArticle('כותרת בעברית');
+      const articleB = await makePendingArticle('כותרת בעברית');
+      for (const article of [articleA, articleB]) {
+        publish(article);
+        await saveWithSlugRetry(article);
+      }
+      assert.equal(articleA.slug, 'כותרת-בעברית');
+      assert.equal(articleB.slug, 'כותרת-בעברית-2');
     });
   });
 });

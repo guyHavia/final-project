@@ -1,9 +1,9 @@
-import { Article } from '../models/article.model.js';
+import { Article, STATE } from '../models/article.model.js';
 import { Comment } from '../models/comment.model.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
-import { applyTransition, saveWithSlugRetry } from './articleState.service.js';
+import { applyTransition, guardTransition, saveTransition, toActor } from './articleState.service.js';
 import { presentFullArticle } from './articleQuery.service.js';
 
 /**
@@ -13,10 +13,6 @@ import { presentFullArticle } from './articleQuery.service.js';
  */
 
 const MAX_NOTE_LENGTH = 1000;
-
-function toActor(user) {
-  return { id: String(user._id), role: user.role };
-}
 
 async function loadArticle(id) {
   const article = await Article.findById(id);
@@ -32,8 +28,9 @@ async function loadArticle(id) {
  */
 export async function approveArticle(id, user) {
   const article = await loadArticle(id);
-  applyTransition(article, 'Published', toActor(user));
-  await saveWithSlugRetry(article);
+  guardTransition(article);
+  applyTransition(article, STATE.PUBLISHED, toActor(user));
+  await saveTransition(article);
 
   const marker = article.history[article.history.length - 1];
   logger.info('article.approved', {
@@ -70,8 +67,9 @@ function readNote(input) {
 export async function returnArticle(id, user, input) {
   const note = readNote(input);
   const article = await loadArticle(id);
-  applyTransition(article, 'Returned for Corrections', toActor(user), { note });
-  await article.save();
+  guardTransition(article);
+  applyTransition(article, STATE.RETURNED, toActor(user), { note });
+  await saveTransition(article);
   logger.info('article.returned', { articleId: String(article._id), userId: String(user._id) });
   return presentFullArticle(article.toObject());
 }

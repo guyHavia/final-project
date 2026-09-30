@@ -61,7 +61,7 @@ function seedPublished(fields = {}) {
   });
 }
 
-const as = (who, req) => (who ? req.set('Cookie', cookies[who]) : req);
+const as = (who, req) => (who ? req.set('Cookie', cookies[who]).set('Sec-Fetch-Site', 'same-origin') : req);
 const create = (who, body) => as(who, request(app).post('/api/articles').send(body));
 const edit = (who, id, body) => as(who, request(app).patch(`/api/articles/${id}`).send(body));
 const autosave = (who, id, body) => as(who, request(app).patch(`/api/articles/${id}/autosave`).send(body));

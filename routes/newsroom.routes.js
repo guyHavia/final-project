@@ -29,6 +29,7 @@ newsroomRouter.get('/login', (req, res) => {
 });
 
 newsroomRouter.get('/newsroom', requireSession, (req, res) => {
+  if (req.session.user.role === 'editor') return res.redirect('/newsroom/review');
   res.render('newsroom');
 });
 
@@ -39,3 +40,6 @@ newsroomRouter.get('/newsroom/review', requireSession, requireEditorArea, (req, 
 newsroomRouter.get('/newsroom/analytics', requireSession, requireEditorArea, (req, res) => {
   res.render('newsroom-analytics');
 });
+
+// Placeholder until P3 mounts the public home page; /login already sends signed-in users to their area.
+newsroomRouter.get('/', (req, res) => res.redirect('/login'));

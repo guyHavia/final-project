@@ -5,7 +5,7 @@ import { statsRoutes } from './stats.routes.js';
 import { articleRoutes } from './article.routes.js';
 import { weatherRoutes } from './weather.routes.js';
 import { userRoutes } from './users.routes.js';
-import commentRoutes from './comment.routes.js';
+import { commentRoutes } from './comment.routes.js';
 
 export const apiRouter = Router();
 

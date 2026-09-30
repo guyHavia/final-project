@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
-import { Article, CATEGORIES, STATES, PUBLIC_FILTER } from '../models/article.model.js';
-import { User } from '../models/user.model.js';
+import { Article, CATEGORIES, STATE, STATES, PUBLIC_FILTER, CONTENT_FIELDS } from '../models/article.model.js';
+import { User, ROLE } from '../models/user.model.js';
 import { AppError } from '../lib/AppError.js';
-import { encodeCursor, decodeCursor } from '../lib/cursor.js';
-import { CONTENT_FIELDS, workingCopyDiffersFromPublished } from './articleState.service.js';
+import { escapeRegex, isObjectId, clampLimit } from '../lib/query.js';
+import { encodeCursor, decodeCursor, DIRECTIONS } from '../lib/cursor.js';
+import { workingCopyDiffersFromPublished } from './articleState.service.js';
 
 /**
  * Every article read in the system: the public feed, the editor's newsroom view,
@@ -24,13 +25,7 @@ const PUBLIC_SORTS = {
 
 /** `limit` → an integer in 1..MAX_LIMIT; anything non-numeric → DEFAULT_LIMIT. */
 export function parseLimit(raw) {
-  const n = Number.parseInt(raw, 10);
-  if (Number.isNaN(n)) return DEFAULT_LIMIT;
-  return Math.min(MAX_LIMIT, Math.max(1, n));
-}
-
-function escapeRegex(text) {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return clampLimit(raw, { defaultLimit: DEFAULT_LIMIT, maxLimit: MAX_LIMIT });
 }
 
 /** Case-insensitive "contains" match on `field`, or `null` when `q` is empty. */
@@ -47,45 +42,58 @@ function checkCategory(category) {
 }
 
 /**
- * The "start after the last item" condition for a descending keyset sort on
- * `field`: a smaller value, or the same value with a smaller `_id`. The cursor's
- * value type must match the field's (a cursor from another sort is rejected).
+ * The "start after the last item" condition for a keyset sort on `field`: a
+ * strictly later value in the sort direction, or the same value with a later
+ * `_id` (smaller when `desc`, larger when `asc`). The cursor's value type and
+ * direction must match the request (a cursor from another sort/order is rejected).
  */
-function afterCursor(field, cursor, valueIsDate) {
+function afterCursor(field, cursor, valueIsDate, dir = 'desc') {
   if (cursor === undefined || cursor === '') return null;
   const decoded = decodeCursor(cursor);
-  if (!decoded || decoded.v instanceof Date !== valueIsDate) {
+  if (!decoded || decoded.v instanceof Date !== valueIsDate || decoded.dir !== dir) {
     throw AppError.badRequest('invalid cursor');
   }
   const id = new mongoose.Types.ObjectId(decoded.id);
-  return { $or: [{ [field]: { $lt: decoded.v } }, { [field]: decoded.v, _id: { $lt: id } }] };
+  const op = dir === 'asc' ? '$gt' : '$lt';
+  return { $or: [{ [field]: { [op]: decoded.v } }, { [field]: decoded.v, _id: { [op]: id } }] };
 }
 
-function build(field, clauses) {
+function checkOrder(order) {
+  if (order === undefined || order === '') return 'desc';
+  if (!DIRECTIONS.includes(order)) throw AppError.badRequest('unknown order');
+  return order;
+}
+
+function build(field, clauses, dir = 'desc') {
   const present = clauses.filter(Boolean);
+  const step = dir === 'asc' ? 1 : -1;
   return {
     filter: present.length === 1 ? present[0] : { $and: present },
-    sort: { [field]: -1, _id: -1 },
+    sort: { [field]: step, _id: step },
     field,
+    dir,
   };
 }
 
 /**
  * Public feed query. Only articles with a published version; search and the
  * category filter read the published version, never the working copy.
- * Throws `AppError.badRequest` for an unknown sort/category or a bad cursor.
+ * `order` is `desc` (default: newest / most viewed first) or `asc` (oldest / least viewed first).
+ * Throws `AppError.badRequest` for an unknown sort/order/category or a bad cursor.
  */
-export function buildPublicFeedQuery({ q, category, sort = 'date', cursor } = {}) {
-  const field = PUBLIC_SORTS[sort || 'date'];
+export function buildPublicFeedQuery({ q, category, sort = 'date', order, cursor } = {}) {
+  const key = sort || 'date';
+  const field = Object.hasOwn(PUBLIC_SORTS, key) ? PUBLIC_SORTS[key] : undefined;
   if (!field) throw AppError.badRequest('unknown sort');
   const checkedCategory = checkCategory(category);
+  const dir = checkOrder(order);
 
   return build(field, [
     PUBLIC_FILTER,
     checkedCategory && { 'published.category': checkedCategory },
     titleContains('published.title', q),
-    afterCursor(field, cursor, field === 'firstPublishedAt'),
-  ]);
+    afterCursor(field, cursor, field === 'firstPublishedAt', dir),
+  ], dir);
 }
 
 /**
@@ -125,36 +133,41 @@ export function buildMineQuery(authorId, { state, cursor } = {}) {
  */
 const HAS_UNSUBMITTED_CHANGES = {
   $and: [
-    { $eq: ['$state', 'Published'] },
+    { $eq: ['$state', STATE.PUBLISHED] },
     { $or: CONTENT_FIELDS.map((f) => ({ $ne: [`$${f}`, `$published.${f}`] })) },
   ],
 };
 
-/** What a list page loads: everything the cards and work items show, no bodies, no history. */
-const LIST_PROJECTION = {
+/** Every content field except the body: lists show the rest, never the full text. */
+const LIST_CONTENT_FIELDS = CONTENT_FIELDS.filter((field) => field !== 'body');
+
+/** What a public feed page loads: the published card fields only — no working copy, no workflow fields. */
+const PUBLIC_PROJECTION = {
+  slug: 1,
+  author: 1,
+  firstPublishedAt: 1,
+  viewCount: 1,
+  ...Object.fromEntries([...LIST_CONTENT_FIELDS, 'publishedAt'].map((f) => [`published.${f}`, 1])),
+};
+
+/** What a newsroom / work-area page loads: the working copy and workflow fields, no bodies, no history. */
+const WORK_PROJECTION = {
   slug: 1,
   state: 1,
   author: 1,
-  title: 1,
-  abstract: 1,
-  image: 1,
-  category: 1,
   editorNote: 1,
   firstPublishedAt: 1,
   submittedAt: 1,
   updatedAt: 1,
   viewCount: 1,
-  'published.title': 1,
-  'published.abstract': 1,
-  'published.image': 1,
-  'published.category': 1,
-  'published.publishedAt': 1,
+  ...Object.fromEntries(LIST_CONTENT_FIELDS.map((f) => [f, 1])),
+  'published.version': 1,
   hasUnsubmittedChanges: HAS_UNSUBMITTED_CHANGES,
 };
 
 /** Runs a built query for one page: fetches `limit + 1` to know whether another page exists. */
-async function runPage({ filter, sort, field }, limit) {
-  const docs = await Article.find(filter, LIST_PROJECTION)
+async function runPage({ filter, sort, field, dir }, limit, projection) {
+  const docs = await Article.find(filter, projection)
     .sort(sort)
     .limit(limit + 1)
     .lean();
@@ -163,7 +176,7 @@ async function runPage({ filter, sort, field }, limit) {
   if (docs.length > limit) {
     docs.pop();
     const last = docs[docs.length - 1];
-    nextCursor = encodeCursor({ v: last[field], id: last._id });
+    nextCursor = encodeCursor({ v: last[field], id: last._id, dir });
   }
   return { docs: await attachAuthors(docs), nextCursor };
 }
@@ -199,18 +212,26 @@ function toPublicCard(doc) {
   };
 }
 
+/** The working copy's content fields; optional ones read `null` when unset, the body `''`. */
+function workingCopy(doc, { withBody = false } = {}) {
+  return {
+    title: doc.title,
+    abstract: doc.abstract ?? null,
+    ...(withBody && { body: doc.body ?? '' }),
+    image: doc.image ?? null,
+    category: doc.category,
+  };
+}
+
 /** Newsroom / work-area list item: the working copy plus workflow fields, no body. */
 function toWorkItem(doc) {
   return {
     id: String(doc._id),
     slug: doc.slug ?? null,
     state: doc.state,
-    title: doc.title,
-    abstract: doc.abstract ?? null,
-    image: doc.image ?? null,
-    category: doc.category,
+    ...workingCopy(doc),
     author: doc.author,
-    editorNote: doc.state === 'Returned for Corrections' ? (doc.editorNote ?? null) : null,
+    editorNote: doc.state === STATE.RETURNED ? (doc.editorNote ?? null) : null,
     hasPublishedVersion: Boolean(doc.published),
     hasUnsubmittedChanges: Boolean(doc.hasUnsubmittedChanges),
     publishedAt: doc.firstPublishedAt ?? null,
@@ -221,17 +242,17 @@ function toWorkItem(doc) {
 }
 
 export async function listPublicFeed({ limit, ...params }) {
-  const { docs, nextCursor } = await runPage(buildPublicFeedQuery(params), parseLimit(limit));
+  const { docs, nextCursor } = await runPage(buildPublicFeedQuery(params), parseLimit(limit), PUBLIC_PROJECTION);
   return { items: docs.map(toPublicCard), nextCursor };
 }
 
 export async function listNewsroom({ limit, ...params }) {
-  const { docs, nextCursor } = await runPage(buildNewsroomQuery(params), parseLimit(limit));
+  const { docs, nextCursor } = await runPage(buildNewsroomQuery(params), parseLimit(limit), WORK_PROJECTION);
   return { items: docs.map(toWorkItem), nextCursor };
 }
 
 export async function listMine(authorId, { limit, ...params }) {
-  const { docs, nextCursor } = await runPage(buildMineQuery(authorId, params), parseLimit(limit));
+  const { docs, nextCursor } = await runPage(buildMineQuery(authorId, params), parseLimit(limit), WORK_PROJECTION);
   return { items: docs.map(toWorkItem), nextCursor };
 }
 
@@ -247,7 +268,7 @@ export async function getArticleForViewer(id, viewer) {
   const doc = await Article.findById(id).lean();
   if (!doc) throw AppError.notFound('article not found');
 
-  const isEditor = viewer?.role === 'editor';
+  const isEditor = viewer?.role === ROLE.EDITOR;
   const isOwner = viewer && String(doc.author) === String(viewer._id);
   const [withAuthor] = await attachAuthors([doc]);
 
@@ -255,8 +276,6 @@ export async function getArticleForViewer(id, viewer) {
   if (!doc.published || !doc.firstPublishedAt) throw AppError.notFound('article not found');
   return toPublicArticle(withAuthor);
 }
-
-const OBJECT_ID = /^[0-9a-f]{24}$/i;
 
 /**
  * P2-07 — the server-render hook for P3's `GET /article/:slug` page. Returns one
@@ -278,7 +297,7 @@ export async function getArticleForRender(slugOrId) {
   if (!key) return null;
 
   let doc = await Article.findOne({ slug: key.toLowerCase(), ...PUBLIC_FILTER }).lean();
-  if (!doc && OBJECT_ID.test(key)) {
+  if (!doc && isObjectId(key)) {
     doc = await Article.findOne({ _id: key, ...PUBLIC_FILTER }).lean();
   }
   if (!doc?.published) return null;
@@ -306,16 +325,12 @@ function toFullArticle(doc) {
     id: String(doc._id),
     slug: doc.slug ?? null,
     state: doc.state,
-    title: doc.title,
-    abstract: doc.abstract ?? null,
-    body: doc.body ?? '',
-    image: doc.image ?? null,
-    category: doc.category,
+    ...workingCopy(doc, { withBody: true }),
     author: doc.author,
     editorNote: doc.editorNote ?? null,
     submittedAt: doc.submittedAt ?? null,
     published: doc.published ?? null,
-    hasUnsubmittedChanges: doc.state === 'Published' && workingCopyDiffersFromPublished(doc),
+    hasUnsubmittedChanges: doc.state === STATE.PUBLISHED && workingCopyDiffersFromPublished(doc),
     firstPublishedAt: doc.firstPublishedAt ?? null,
     history: (doc.history ?? []).map((h) => ({ at: h.at, kind: h.kind, by: h.by ? String(h.by) : null })),
     viewCount: doc.viewCount ?? 0,

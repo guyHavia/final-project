@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../lib/asyncHandler.js';
 import { requireRole } from '../middleware/auth.js';
 import { getArticleStats } from '../controllers/stats.controller.js';
 
@@ -7,4 +8,4 @@ import { getArticleStats } from '../controllers/stats.controller.js';
 // `/api/articles` router doesn't exist in this codebase yet.
 export const statsRoutes = Router();
 
-statsRoutes.get('/:id/stats', requireRole('editor'), getArticleStats);
+statsRoutes.get('/:id/stats', requireRole('editor'), asyncHandler(getArticleStats));

@@ -79,10 +79,11 @@ describe('GET /newsroom', () => {
     assert.match(res.text, /data-screen="newsroom-reporter"/);
   });
 
-  test('also renders for an editor session (editors may check their own queue elsewhere, but this page itself only gates on session presence)', async () => {
+  test('redirects an editor session to /newsroom/review', async () => {
     const cookie = await cookieFor('ed1');
     const res = await request(app).get('/newsroom').set('Cookie', cookie);
-    assert.equal(res.status, 200);
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.location, '/newsroom/review');
   });
 });
 
@@ -99,6 +100,32 @@ describe('GET /newsroom/review', () => {
     const res = await request(app).get('/newsroom/review').set('Cookie', cookie);
     assert.equal(res.status, 302);
     assert.equal(res.headers.location, '/newsroom');
+  });
+});
+
+describe('review panel comment moderation (#56)', () => {
+  test('review shell has a comments section with list, status and load-more', async () => {
+    const cookie = await cookieFor('ed1');
+    const res = await request(app).get('/newsroom/review').set('Cookie', cookie);
+    assert.match(res.text, /id="comments-section"/);
+    assert.match(res.text, /id="comments-list"/);
+    assert.match(res.text, /id="comments-status"[^>]*aria-live="polite"/);
+    assert.match(res.text, /id="comments-more"/);
+  });
+
+  test('newsroom-comments.js is served, uses the comment endpoints, and never writes HTML', async () => {
+    const res = await request(app).get('/js/newsroom-comments.js');
+    assert.equal(res.status, 200);
+    assert.match(res.text, /\/comments\?/);
+    assert.match(res.text, /\/comments\/\$\{[^}]+\}`,\s*\{\s*method: 'DELETE'/);
+    assert.match(res.text, /confirm\(/);
+    assert.match(res.text, /textContent/);
+    assert.doesNotMatch(res.text, /innerHTML|insertAdjacentHTML|outerHTML/);
+  });
+
+  test('editor.js hooks the comments module into the review panel', async () => {
+    const res = await request(app).get('/js/newsroom-editor.js');
+    assert.match(res.text, /from '\.\/newsroom-comments\.js'/);
   });
 });
 
@@ -133,5 +160,20 @@ describe('shared newsroom header', () => {
     const res = await request(app).get('/newsroom').set('Cookie', cookie);
     assert.match(res.text, /href="\/newsroom" aria-current="page"/);
     assert.doesNotMatch(res.text, /Impact Analytics/);
+  });
+});
+
+describe('GET /', () => {
+  test('redirects a signed-out visitor to /login', async () => {
+    const res = await request(app).get('/');
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.location, '/login');
+  });
+
+  test('redirects a signed-in reporter on to /newsroom via /login', async () => {
+    const cookie = await cookieFor('rep1');
+    const res = await request(app).get('/').set('Cookie', cookie).redirects(1);
+    assert.equal(res.status, 302);
+    assert.equal(res.headers.location, '/newsroom');
   });
 });

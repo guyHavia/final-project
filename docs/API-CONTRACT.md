@@ -15,6 +15,8 @@ adds the route. Frontend (P3, P4) codes against this.
   body by hand.
 - Mongoose errors are mapped by `errorHandler`: `ValidationError` → 400
   `validation`, `CastError` → 400 `invalid_id`, duplicate key → 409 `duplicate`.
+- Body-parser faults are mapped too: malformed JSON → 400 `bad_request`, body over
+  the 256 KB JSON limit → 413 `payload_too_large`.
 - Async route handlers are wrapped in `asyncHandler(...)`.
 
 ## How to protect a route
@@ -43,31 +45,71 @@ router.patch('/:id/autosave', requireRole('reporter', 'editor'), asyncHandler(au
 `{ error: { code: "forbidden" } }` when the role is not allowed. Both fail via
 `next(AppError...)`; never build the error body in a route.
 
+## Pages (server-rendered, not JSON)
+
+Plain-path EJS pages from `routes/newsroom.routes.js` (P4). They carry no data;
+the client calls the JSON API below. Page access is a session-presence redirect
+only, not authorization: authorization stays on the API (`requireRole`).
+
+| Path | Who | Behaviour |
+|------|-----|-----------|
+| `GET /login` | anyone | login form; an already signed-in user is redirected to their area (`/newsroom` for a reporter, `/newsroom/review` for an editor) |
+| `GET /newsroom` | any signed-in user | newsroom work area (reporter drafts and notes) |
+| `GET /newsroom/review` | editor | review queue and management; a reporter is redirected to `/newsroom` |
+| `GET /newsroom/analytics` | editor | Impact Analytics screen; a reporter is redirected to `/newsroom` |
+
+No session on any `/newsroom*` page redirects to `/login`. Not built yet: the
+public feed and `GET /article/:slug` (P3-04/P3-05).
+
 ## Endpoints
 
 ### GET /api/health  — _skeleton_
 
 `200 → { "data": { "status": "ok" } }`. No auth. Liveness check.
 
+### Weather  — _P5_
+
+- `GET /api/weather` — no auth. Footer weather widget for `WEATHER_CITY`
+  (default `Tel Aviv,IL`), from OpenWeatherMap.
+  - `200 → { data: { tempC, description, icon, observedAt } }` — `observedAt`
+    is an ISO 8601 timestamp of the upstream fetch.
+  - Served from a server-side cache; the upstream is contacted at most once per
+    15 minutes (failed attempts count), and data older than 15 minutes is
+    never served.
+  - `503 { error: { message: "weather unavailable", code: "service_unavailable" } }`
+    when `WEATHER_API_KEY` is unset, or the upstream fails/times out (5 s) and
+    there is no fresh cached value. No placeholder data is ever returned.
+
 ### Auth  — _P1_
 
 Session is a signed `connect.sid` cookie (httpOnly, `sameSite=lax`, 7-day TTL),
 backed by the `sessions` collection so a login survives a server restart. The
 session stores only `{ id, role }`, snapshotted at login (D4 + ADR 0001).
+Login regenerates the session id (a new `connect.sid` is issued). A password
+change, role change or deactivation destroys that user's sessions (all of them,
+except the caller's own current session when they edit their own account), so
+the change applies on their next request (they get `401` and must log in again).
 
 - `POST /api/auth/login` — body `{ username, password }`.
-  - `200 → { data: { id, username, role, displayName } }` and a `Set-Cookie`.
+  - `200 → { data: { id, username, role, displayName } }` and a `Set-Cookie`
+    carrying a freshly regenerated session id.
   - `400` if `username` or `password` is missing.
   - `401 { error: { message: "invalid credentials", code: "unauthorized" } }`
     for an unknown username, a wrong password, **or** a deactivated account —
     one message, no user enumeration.
   - `429 { error: { message: "too many failed login attempts, try again later", code: "rate_limited" } }`
-    after 5 failed attempts for that username within 15 minutes; the lockout
-    lasts 15 minutes from the 5th failure. Checked before the credentials are
-    looked up, so a locked-out username gets 429 even with the correct
-    password. A successful login clears that username's failure count.
-    In-memory `Map`, same style as the comment rate limiter (D8) — a restart
-    resets it, which is harmless.
+    when either limit is hit within a 15-minute window: 5 attempts for that
+    username (locks the username for 15 minutes), or 20 attempts from that
+    client IP across any usernames (locks the IP for 15 minutes). Each attempt
+    is counted when the request arrives, before the credentials are looked up,
+    so parallel bursts cannot exceed the limit, and a locked-out username gets
+    429 even with the correct password. A successful login clears that
+    username's failure count and refunds the IP's attempt. Unknown and
+    deactivated users still cost a bcrypt comparison, so response time does not
+    reveal whether a username exists. Failed logins are logged with the
+    normalized username only. In-memory, size-capped maps pruned on a timer,
+    same style as the comment rate limiter (D8) — a restart resets them, which
+    is harmless.
 - `POST /api/auth/logout` — `200 → { data: { ok: true } }`. Destroys the session
   and clears the cookie. Safe to call without a session.
 - `GET /api/auth/me`
@@ -91,21 +133,33 @@ P5 reuses `createUser({ username, password, role, displayName })` from
 
 - **`POST /api/users`** — editor-only. Body `{ username, password, role, displayName }`.
   - `201 → { data: userView }`.
-  - `400` on a missing field or `role` outside `reporter|editor`.
+  - Field rules: `username` and `displayName` are non-blank strings (trimmed;
+    max 64 / 100 chars); `role` is `reporter|editor`; `password` is a string of
+    at least 10 characters and at most 72 **bytes** (bcrypt truncates beyond
+    that). Unknown body fields are rejected.
+  - `400` on a missing field, a wrong type, an out-of-range password, an
+    unknown field, or `role` outside `reporter|editor`.
   - `409 { error: { code: "duplicate" } }` if `username` is taken (case-insensitive).
 - **`GET /api/users?q=&cursor=&limit=`** — editor-only. `q` is a case-insensitive
-  substring match on `username`; `limit` defaults to 20 (cap 100); `cursor` is
-  the last `id` from the previous page (keyset).
+  **literal** substring match on `username` (regex characters are escaped; a
+  repeated `q` → `400`); `limit` defaults to 20 (cap 100, non-numeric → 20);
+  `cursor` is the last `id` from the previous page (keyset; malformed → `400`).
   - `200 → { data: { users: [userView], nextCursor: <id|null> } }`.
 - **`GET /api/users/:id`** — editor-only.
-  - `200 → { data: userView }`; `404` if not found.
+  - `200 → { data: userView }`; `404` if not found or the id is malformed.
 - **`PATCH /api/users/:id`** — editor-only. Any subset of
   `{ role, displayName, active, password }`. `password` is re-hashed via the
   model's `setPassword`. Setting `active: false` is the soft-delete path (D2)
   and must also call `destroySessionsForUser(id)` (`config/session.js`, P1-08)
-  so the user is logged out everywhere immediately.
-  - `200 → { data: userView }`; `400` on an unknown field or bad `role`; `404` if not found.
-- **`DELETE /api/users/:id`** — editor-only. **Soft-delete** (D2): sets
+  so the user is logged out everywhere immediately. A changed `role` or a new
+  `password` does the same (a no-op `role` does not); when the target is the
+  caller, their current session is kept.
+  - Same field rules as create; `active` must be a JSON boolean (`"false"` is
+    a `400`). An editor cannot deactivate or demote **themselves** (`403`), and
+    nobody can deactivate or demote the **last active editor** (`409`).
+  - `200 → { data: userView }`; `400` on an unknown field or a wrong type/value; `403` self-lockout; `404` if not found; `409` last active editor.
+- **`DELETE /api/users/:id`** — editor-only. An editor cannot delete
+  themselves (`403`) or the last active editor (`409`). **Soft-delete** (D2): sets
   `active: false`; the byline and `author` refs stay valid. A hard delete is
   allowed **only** when the user has zero articles (coordinate with P2's
   article count). Either path must also call `destroySessionsForUser(id)`
@@ -113,9 +167,13 @@ P5 reuses `createUser({ username, password, role, displayName })` from
   - `200 → { data: { ok: true, deleted: "soft" | "hard" } }`; `404` if not found.
 - **`PATCH /api/users/me`** — any authenticated user, own account only. Body is
   `{ displayName }` and/or `{ password, currentPassword }`; changing the
-  password requires a correct `currentPassword`.
-  - `200 → { data: userView }`; `400` if `currentPassword` is missing when
-    `password` is given; `401` if `currentPassword` is wrong.
+  password requires a correct `currentPassword`. `displayName` and `password`
+  follow the create rules; any other field (`role`, `active`, `username`, …) is
+  rejected. A password change destroys the user's **other** sessions and keeps
+  the current one.
+  - `200 → { data: userView }`; `400` on an unknown field, a wrong type, a weak
+    `password`, or `currentPassword` missing when `password` is given; `401` if
+    `currentPassword` is wrong.
 
 ### Articles  — _P2_
 
@@ -127,16 +185,30 @@ only ever return the `published` snapshot, never the working copy.
 All lists use keyset pagination: pass the previous page's `nextCursor` as
 `cursor`. `nextCursor` is an opaque string, `null` exactly on the last page.
 `limit` defaults to 20 and is clamped to `1..50` (non-numeric → 20). A malformed
-cursor, or a cursor from a different sort, → `400 bad_request`.
+cursor, or a cursor from a different sort or `order`, → `400 bad_request`.
+
+**Keyset paging caveat.** A cursor is a position (`{ sort value, id, direction }`),
+not a snapshot. Sorts on a value that can change between requests — `popularity`
+(`viewCount`) and the newsroom/mine `updatedAt` — can therefore show an item twice
+or skip one when its value moves while a client is paging (e.g. an article gains
+views, or is edited, after page 1 was served). Within one page and for the stable
+`date` sort (`firstPublishedAt`, set once) results are exact. Clients that need
+uniqueness should de-duplicate by `id`; a fresh first page always reflects the
+current order. This trade-off is accepted in exchange for no `skip`/offset scans.
 
 Bylines are `author: { id, displayName }`. A deactivated author keeps their
 name (D2); an author whose document is gone shows `"Unknown author"`.
 
-- **`GET /api/articles?q=&category=&sort=&cursor=&limit=`** — public feed, no auth.
+- **`GET /api/articles?q=&category=&sort=&order=&cursor=&limit=`** — public feed, no auth.
   - `q` — case-insensitive "contains" on the published title (regex characters are literal).
   - `category` — one of the `CATEGORIES` list, matched on the published category. Unknown → `400`.
   - `sort` — `date` (default, first publication, newest first) or `popularity`
     (`viewCount`, highest first). Ties break on `id`. Unknown → `400`.
+  - `order` — `desc` (default: newest / most viewed first) or `asc` (oldest / least
+    viewed first, ties on `id` ascending). Works with every `sort`. Unknown → `400`.
+    The cursor encodes the direction: keep sending the same `order` with a cursor;
+    a cursor from the other direction → `400`. The newsroom and `mine` lists are
+    always `updatedAt` desc and ignore `order`.
   - `200 → { data: { items: [Card], nextCursor } }`.
   - `Card` = `{ id, slug, title, abstract, image, category, author, publishedAt, updatedAt, viewCount }`.
     `publishedAt` is the first publication date; `updatedAt` is when the current
@@ -207,6 +279,11 @@ only their own (`403` otherwise) and not while it is `Pending Editor Approval`
     reporter's article; `409` if the state can't be submitted (already
     Pending) or a Published article has no changes.
 
+Transitions (submit, approve, return) are conditional on the state and revision
+the request read: if the article changed in between — a concurrent approve, a
+return, or an autosave — the loser gets `409 conflict` and nothing is written.
+Of N concurrent approves exactly one is `200` and adds one `history` marker.
+
 All four: `401` without a session; `400 invalid_id` for a malformed id; `404`
 for an unknown one.
 
@@ -218,7 +295,10 @@ changes are legal is decided by the state machine; an illegal one is `409`.
 
 - **`POST /api/articles/:id/approve`** — `Pending Editor Approval` → `Published`.
   Copies the working copy into `published`, bumps `published.version`, sets
-  `slug` and `firstPublishedAt` on the first approval only (a taken slug gets
+  `slug` and `firstPublishedAt` on the first approval only. The slug is the
+  lowercased title with letters/digits of any script kept (a Hebrew title gives
+  `חדשות-מהעולם`, percent-encoded in URLs) and other runs turned into `-`; a title
+  with no letters or digits falls back to `article-<id>` (a taken slug gets
   `-2`, `-3`, …), clears `submittedAt`, and appends a `history` marker —
   `publish` the first time, `update` after — for Impact Analytics.
   - `200 → { data: <full article> }`. The public view switches to the new version at once.
@@ -233,6 +313,13 @@ changes are legal is decided by the state machine; an illegal one is `409`.
   - `200 → { data: { ok: true } }`; `404` if already deleted.
 
 #### Server-render hook (not an HTTP endpoint) — `getArticleForRender(slugOrId)`
+
+> **Status: not wired.** `getArticleForRender` and `recordArticleView` exist as
+> tested services, but **no route or page calls them yet**: the public pages
+> (`GET /article/:slug`, the feed; tickets P3-04/P3-05) have not been built. Until
+> they exist, **no article view is recorded**, so `viewCount` and Impact
+> Analytics stay at zero for real traffic (P2-08 stays in-progress). The
+> snippet below is the intended usage for P3, not current behaviour.
 
 For P3's `GET /article/:slug` EJS page. Import from `services/articleQuery.service.js`.
 
@@ -292,9 +379,27 @@ not from the JSON API, not from the Ajax comment load.
   - `400 { error: { code: "invalid_id" } }` if `:articleId` is not a well-formed ObjectId.
   - `404` if `:articleId` is well-formed but no such article exists or it has never been published.
   - `429 { error: { message: "you are posting too fast, wait a moment", code: "rate_limited" } }` 
-    if 4th comment from this `deviceId` within 60s; no document is created.
-    `deviceId` is an httpOnly cookie issued on the first request; `app.js` parses
-    the `Cookie` header into `req.cookies` with `cookie-parser`.
+    if this `deviceId` has already posted 3 comments in the last 60s, **or** the
+    client IP (`req.ip`) has already posted 10 in the last 60s; no document is created.
+    The cookie alone is not trusted (it is client-set, so dropping or forging it
+    would reset a per-cookie limit), hence the per-IP cap. The limiter runs after
+    the 400/404 checks above, so rejected posts do not consume quota. `deviceId` is
+    an httpOnly cookie issued on the first request; `app.js` parses the `Cookie`
+    header into `req.cookies` with `cookie-parser`.
+  - `req.ip` is the socket address unless the `TRUST_PROXY` env var is set (number
+    of proxy hops, e.g. `1`); set it when running behind a reverse proxy, otherwise
+    every visitor shares the proxy's IP.
+  - The limiter store is in-memory, capped at 10,000 keys (least-recently-used
+    evicted) and swept for expired entries every 60s.
+
+- `PATCH /api/comments/:id` — editor-only (`requireRole('editor')`); moderation edit.
+  - Body `{ body }` — the only editable field (`authorName`, `article`, `deviceId`
+    and anything else are ignored). Trimmed, 1..2000 chars like create.
+  - `200 → { data: Comment }` (no `deviceId`); `401` no session; `403` reporter.
+  - `400 validation` for a blank/over-long `body`; `400 bad_request` when `body`
+    is missing or not a string; `400 invalid_id` for a malformed `:id`;
+    `404` if no such comment.
+  - Comments have no edited marker or history; `createdAt` is unchanged.
 
 - `DELETE /api/comments/:id` — editor-only (`requireRole('editor')`).
   - `200 → { data: { ok: true } }`.
@@ -316,7 +421,11 @@ not from the JSON API, not from the Ajax comment load.
       `[from, to]` inclusive, ascending, no gaps; a bucket with zero
       `ViewEvent`s still appears with `count: 0`. Bucketing uses Mongo's
       `$dateTrunc` on `ViewEvent.at`; empty buckets are filled in code
-      after the aggregation.
+      after the aggregation. Buckets are **UTC-aligned** (a `day` bucket starts
+      at 00:00 UTC, i.e. 02:00/03:00 Israel time); there is no `tz` param, so
+      clients wanting local days must re-bucket `hour` results themselves.
+    - Range cap — a request spanning more than 2000 buckets (~83 days of
+      `hour`, ~5.5 years of `day`) → `400 { error: { message: "range too large: at most 2000 <bucket> buckets", code: "bad_request" } }`.
     - `markers` — every entry in the article's `history` (not filtered by
       `from`/`to`), mapped to `{ t: entry.at.toISOString(), kind: entry.kind }`
       and sorted ascending by `at`.
@@ -324,3 +433,8 @@ not from the JSON API, not from the Ajax comment load.
   - `400 { error: { code: "invalid_id" } }` if `:id` is not a well-formed
     ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
   - `404` if `:id` is well-formed but no such article exists.
+  - **ViewEvent retention** — raw `ViewEvent` documents (one per view) are kept
+    indefinitely: no TTL index and no pre-aggregation, because Impact Analytics
+    needs full history. Growth is bounded by traffic and served by the
+    `{ article, at }` index. If volume becomes a problem, add rollup
+    collections (hourly counts) rather than expiring events.

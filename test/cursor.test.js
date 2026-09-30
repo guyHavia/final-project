@@ -8,7 +8,7 @@ const ID = '652f1c2ab4d5e6f708192a3b';
 describe('cursor', () => {
   test('round-trips a numeric sort value', () => {
     const decoded = decodeCursor(encodeCursor({ v: 42, id: ID }));
-    assert.deepEqual(decoded, { v: 42, id: ID });
+    assert.deepEqual(decoded, { v: 42, id: ID, dir: 'desc' });
   });
 
   test('round-trips a Date sort value as a Date', () => {
@@ -17,6 +17,17 @@ describe('cursor', () => {
     assert.ok(decoded.v instanceof Date);
     assert.equal(decoded.v.toISOString(), at.toISOString());
     assert.equal(decoded.id, ID);
+  });
+
+  test('round-trips the sort direction; a cursor without one decodes as desc', () => {
+    assert.equal(decodeCursor(encodeCursor({ v: 1, id: ID, dir: 'asc' })).dir, 'asc');
+    assert.equal(decodeCursor(encodeCursor({ v: 1, id: ID, dir: 'desc' })).dir, 'desc');
+    assert.equal(decodeCursor(encodeCursor({ v: 1, id: ID })).dir, 'desc');
+  });
+
+  test('rejects an unknown direction', () => {
+    const raw = Buffer.from(JSON.stringify({ v: 1, id: ID, o: 'sideways' })).toString('base64url');
+    assert.equal(decodeCursor(raw), null);
   });
 
   test('is an opaque URL-safe string', () => {

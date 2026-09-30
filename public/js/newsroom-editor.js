@@ -1,6 +1,7 @@
 import { apiRequest, me } from './auth-client.js';
 import { diffLines } from './line-diff.js';
-import { STATE_META, initShell, initials, avatarColor, timeAgo, agoLabel, hoursSince } from './shell.js';
+import { showComments, resetComments } from './newsroom-comments.js';
+import { STATE_META, initShell, showToast, initials, avatarColor, timeAgo, agoLabel, hoursSince } from './shell.js';
 
 const STATE_ORDER = ['Pending Editor Approval', 'Returned for Corrections', 'In Preparation', 'Published'];
 const STAT_CAPTIONS = {
@@ -22,6 +23,8 @@ const els = {
   returnWrap: document.getElementById('return-note-wrap'),
   groups: document.getElementById('article-groups'),
   panel: document.getElementById('review-panel'),
+  panelBody: document.querySelector('#review-panel .drawer-body'),
+  compareHeader: document.querySelector('#review-panel .compare-header'),
   closeButton: document.getElementById('close-review-button'),
   compareToggle: document.getElementById('compare-toggle'),
   compareFields: document.getElementById('compare-fields'),
@@ -227,9 +230,10 @@ function renderGroups() {
 }
 
 async function quickApprove(id) {
-  await withActionErrorHandling(async () => {
+  await withQueueErrorHandling(async () => {
     await apiRequest(`/articles/${id}/approve`, { method: 'POST' });
     await loadGroups();
+    showToast('Article approved and published');
   });
 }
 
@@ -303,8 +307,10 @@ function renderActionBar(article) {
 
 function exitEditMode() {
   els.editForm.hidden = true;
+  els.compareHeader.hidden = false;
   els.compareFields.hidden = false;
   els.compareBody.hidden = false;
+  els.actionBar.hidden = false;
 }
 
 function enterEditMode(article) {
@@ -314,8 +320,12 @@ function enterEditMode(article) {
   els.editImage.value = article.image || '';
   els.editBody.value = article.body || '';
   els.editForm.hidden = false;
+  els.compareHeader.hidden = true;
   els.compareFields.hidden = true;
   els.compareBody.hidden = true;
+  // The form has its own Save/Cancel; the review actions would act on the old text.
+  els.actionBar.hidden = true;
+  els.editTitle.focus();
 }
 
 async function openReview(id) {
@@ -331,7 +341,10 @@ async function openReview(id) {
   renderReviewHeader(article);
   els.panel.hidden = false;
   els.scrim.hidden = false;
+  els.panel.scrollTop = 0;
+  els.panelBody.scrollTop = 0;
   els.closeButton.focus();
+  showComments(article.id);
 }
 
 function renderReviewHeader(article) {
@@ -343,6 +356,7 @@ function renderReviewHeader(article) {
 
 function closeReview() {
   currentArticle = null;
+  resetComments();
   els.panel.hidden = true;
   els.scrim.hidden = true;
 }
@@ -357,19 +371,31 @@ async function withActionErrorHandling(action) {
   }
 }
 
+// Card-level actions happen with no panel open, so failures surface as a toast.
+async function withQueueErrorHandling(action) {
+  try {
+    await action();
+  } catch (err) {
+    showToast(err.message || 'action failed', 'error');
+  }
+}
+
 async function handleApprove() {
   await withActionErrorHandling(async () => {
     await apiRequest(`/articles/${currentArticle.id}/approve`, { method: 'POST' });
     closeReview();
     await loadGroups();
+    showToast('Article approved and published');
   });
 }
 
 async function handleReturn() {
   await withActionErrorHandling(async () => {
     await apiRequest(`/articles/${currentArticle.id}/return`, { method: 'POST', body: { note: els.returnNote.value.trim() } });
+    // A returned article is with its reporter now: nothing left to act on here.
+    closeReview();
     await loadGroups();
-    await openReview(currentArticle.id);
+    showToast('Returned to the reporter for corrections');
   });
 }
 
@@ -379,6 +405,7 @@ async function handleDelete() {
     await apiRequest(`/articles/${currentArticle.id}`, { method: 'DELETE' });
     closeReview();
     await loadGroups();
+    showToast('Article deleted');
   });
 }
 
@@ -397,6 +424,7 @@ async function handleEditSave(event) {
     });
     await loadGroups();
     await openReview(currentArticle.id);
+    showToast('Changes saved');
   });
 }
 

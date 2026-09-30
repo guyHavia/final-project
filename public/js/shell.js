@@ -42,6 +42,28 @@ export function hoursSince(iso) {
   return iso ? (Date.now() - new Date(iso).getTime()) / 3600e3 : 0;
 }
 
+/**
+ * Transient confirmation ("Article approved") in a polite live region, so the
+ * result of an action is visible and announced even after its panel closes.
+ * `kind` is 'success' (default) or 'error'.
+ */
+export function showToast(message, kind = 'success') {
+  let region = document.getElementById('toast-region');
+  if (!region) {
+    region = document.createElement('div');
+    region.id = 'toast-region';
+    region.className = 'toast-region';
+    region.setAttribute('role', 'status');
+    region.setAttribute('aria-live', 'polite');
+    document.body.append(region);
+  }
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${kind}`;
+  toast.textContent = message;
+  region.append(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
 /** Fills the account menu, wires burger/side menu/account menu and logout. */
 export function initShell(user) {
   const $ = (id) => document.getElementById(id);

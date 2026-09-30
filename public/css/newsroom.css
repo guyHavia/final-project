@@ -337,3 +337,68 @@ textarea.field { padding: 10px 14px; resize: vertical; }
   .chart-area { height: 280px; }
   .drawer-foot .btn { flex: 1 1 45%; }
 }
+
+/* ==============================================================
+   Issue #55 — newsroom UX additions (toasts, invalid fields, tablet).
+   Kept in one block at the end so other tickets' CSS edits merge cleanly.
+   ===================================================================== */
+
+/* action feedback toasts (shell.js showToast) */
+.toast-region { position: fixed; inset-inline: 16px; bottom: 20px; z-index: 70; display: grid; gap: 8px; justify-items: center; pointer-events: none; }
+.toast { pointer-events: auto; max-width: min(480px, 100%); padding: 12px 18px; border-radius: 999px; background: var(--nav); color: var(--nav-ink); font-weight: 600; font-size: 0.9rem; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); animation: toast-in 0.2s; }
+.toast-error { background: var(--st-ret); color: var(--brand-ink); }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
+
+/* error text is red everywhere: autosave status, login, invalid fields */
+#save-status.is-error { color: var(--st-ret); font-weight: 600; }
+.field[aria-invalid='true'] { border-color: var(--st-ret); background: var(--st-ret-bg); }
+#login-error { font-weight: 600; }
+
+/* per-column "Load more" on the reporter board */
+.col .load-more-button { margin-top: 4px; }
+
+/* tablet (~768px): between the phone and desktop layouts */
+@media (max-width: 1024px) {
+  .board { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow-x: visible; }
+  .page { padding-inline: 24px; }
+}
+@media (max-width: 768px) {
+  .nav-in { padding: 0 12px; }
+  .card { grid-template-columns: 96px 1fr; }
+  .thumb { width: 96px; height: 72px; }
+  .compare-header, .compare-row { grid-template-columns: 90px 1fr 1fr; }
+  .drawer { width: min(640px, 100%); }
+  .page-head { align-items: flex-start; }
+}
+@media (max-width: 700px) {
+  .board { grid-template-columns: 1fr; }
+  .drawer { width: 100%; }
+}
+
+/* =====================================================================
+   Issue #54 — Impact Analytics screen polish.
+   ===================================================================== */
+
+.article-picker .search { flex: none; }
+.range-controls > div { min-width: 0; }
+.range-controls .field { width: 100%; font-family: var(--sans); font-variant-numeric: tabular-nums; }
+.range-controls label { display: block; margin-bottom: 6px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-2); }
+.field-error { margin: 0 0 12px; color: var(--st-ret); font-weight: 600; font-size: 0.875rem; }
+.empty-state { padding: 48px 16px; text-align: center; border: 1.5px dashed var(--line); border-radius: 12px; background: var(--surface-2); }
+#search-status { margin: 12px 0 0; }
+.marker-legend { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 0.85rem; color: var(--ink-2); }
+.marker-legend li { display: inline-flex; align-items: center; gap: 8px; }
+.marker-badge { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: var(--surface); font-size: 0.7rem; font-weight: 700; }
+@media (min-width: 701px) and (max-width: 1024px) { .range-controls { grid-template-columns: 1fr 1fr; } .range-controls > div:first-child { grid-column: 1 / -1; } }
+@media (max-width: 700px) { .range-controls { gap: 10px; } .an-grid { gap: 14px; } }
+=======
+/* ---------- review panel: comment moderation (#56) ---------- */
+
+.comments-section { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+.comments-section h3 { font-size: 1.1rem; }
+.comments-section h3:focus { outline: none; }
+.comments-section #comments-status { margin: 6px 0 10px; }
+.comments-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+.comment-item { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.comment-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.comment-body { margin: 6px 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; }

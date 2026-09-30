@@ -1,84 +1,60 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isLockedOut, recordFailedLogin, clearLoginFailures } from '../middleware/loginLockout.js';
+import { createLoginLimiter } from '../middleware/loginLockout.js';
 
-test('recordFailedLogin locks out after maxAttempts within the window, isLockedOut reports it', () => {
-  const store = new Map();
-  const windowMs = 15 * 60 * 1000;
-  const maxAttempts = 5;
-  const lockoutMs = 15 * 60 * 1000;
-  let now = 1_000_000;
+const opts = { windowMs: 1000, lockoutMs: 1000, maxUserAttempts: 5, maxIpAttempts: 8, maxEntries: 100 };
 
-  for (let i = 0; i < 4; i += 1) {
-    recordFailedLogin(store, 'alice', now, windowMs, maxAttempts, lockoutMs);
-    assert.equal(isLockedOut(store, 'alice', now), false, `not locked after ${i + 1} attempts`);
-  }
-
-  recordFailedLogin(store, 'alice', now, windowMs, maxAttempts, lockoutMs);
-  assert.equal(isLockedOut(store, 'alice', now), true, 'locked after the 5th attempt');
+test('reserve counts the attempt immediately, so a synchronous burst cannot exceed the limit', () => {
+  const l = createLoginLimiter(opts);
+  const results = Array.from({ length: 15 }, () => l.reserve('alice', '1.1.1.1', 0).allowed);
+  assert.equal(results.filter(Boolean).length, 5);
 });
 
-test('lockout expires after lockoutMs', () => {
-  const store = new Map();
-  const windowMs = 15 * 60 * 1000;
-  const maxAttempts = 5;
-  const lockoutMs = 15 * 60 * 1000;
-  let now = 1_000_000;
-
-  for (let i = 0; i < 5; i += 1) {
-    recordFailedLogin(store, 'bob', now, windowMs, maxAttempts, lockoutMs);
-  }
-  assert.equal(isLockedOut(store, 'bob', now), true);
-
-  now += lockoutMs + 1;
-  assert.equal(isLockedOut(store, 'bob', now), false, 'unlocked once lockoutMs has passed');
+test('username lock expires after lockoutMs', () => {
+  const l = createLoginLimiter(opts);
+  for (let i = 0; i < 5; i += 1) l.reserve('bob', '1.1.1.1', 0);
+  assert.equal(l.reserve('bob', '2.2.2.2', 10).allowed, false);
+  assert.equal(l.reserve('bob', '2.2.2.2', 1001).allowed, true);
 });
 
-test('attempts older than the window do not count toward the threshold', () => {
-  const store = new Map();
-  const windowMs = 15 * 60 * 1000;
-  const maxAttempts = 5;
-  const lockoutMs = 15 * 60 * 1000;
-  let now = 1_000_000;
-
-  for (let i = 0; i < 4; i += 1) {
-    recordFailedLogin(store, 'carol', now, windowMs, maxAttempts, lockoutMs);
-  }
-
-  now += windowMs + 1; // the 4 earlier attempts age out
-  recordFailedLogin(store, 'carol', now, windowMs, maxAttempts, lockoutMs);
-  assert.equal(isLockedOut(store, 'carol', now), false, 'only 1 attempt inside the current window');
+test('attempts older than the window do not count', () => {
+  const l = createLoginLimiter(opts);
+  for (let i = 0; i < 4; i += 1) l.reserve('carol', '1.1.1.1', 0);
+  assert.equal(l.reserve('carol', '1.1.1.1', 1001).allowed, true);
+  assert.equal(l.reserve('carol', '1.1.1.1', 1002).allowed, true);
 });
 
-test('clearLoginFailures resets a username so the next failure starts a fresh count', () => {
-  const store = new Map();
-  const windowMs = 15 * 60 * 1000;
-  const maxAttempts = 5;
-  const lockoutMs = 15 * 60 * 1000;
-  const now = 1_000_000;
-
-  for (let i = 0; i < 5; i += 1) {
-    recordFailedLogin(store, 'dave', now, windowMs, maxAttempts, lockoutMs);
-  }
-  assert.equal(isLockedOut(store, 'dave', now), true);
-
-  clearLoginFailures(store, 'dave');
-  assert.equal(isLockedOut(store, 'dave', now), false);
-
-  recordFailedLogin(store, 'dave', now, windowMs, maxAttempts, lockoutMs);
-  assert.equal(isLockedOut(store, 'dave', now), false, 'one failure after a clear is not a lockout');
+test('succeed clears the username count so the next failures start fresh', () => {
+  const l = createLoginLimiter(opts);
+  for (let i = 0; i < 5; i += 1) l.reserve('dave', '1.1.1.1', 0);
+  l.succeed('dave', '1.1.1.1');
+  for (let i = 0; i < 4; i += 1) assert.equal(l.reserve('dave', '9.9.9.9', 1).allowed, true);
 });
 
-test('a different username is never affected by another username\'s failures', () => {
-  const store = new Map();
-  const windowMs = 15 * 60 * 1000;
-  const maxAttempts = 5;
-  const lockoutMs = 15 * 60 * 1000;
-  const now = 1_000_000;
+test('one ip cannot exceed maxIpAttempts across many usernames; other ips are unaffected', () => {
+  const l = createLoginLimiter(opts);
+  const res = Array.from({ length: 12 }, (_, i) => l.reserve(`user${i}`, '3.3.3.3', 0).allowed);
+  assert.equal(res.filter(Boolean).length, 8);
+  assert.equal(l.reserve('fresh', '4.4.4.4', 0).allowed, true);
+});
 
-  for (let i = 0; i < 5; i += 1) {
-    recordFailedLogin(store, 'eve', now, windowMs, maxAttempts, lockoutMs);
-  }
-  assert.equal(isLockedOut(store, 'eve', now), true);
-  assert.equal(isLockedOut(store, 'frank', now), false);
+test('a blocked ip cannot keep extending a victim username lock', () => {
+  const l = createLoginLimiter(opts);
+  for (let i = 0; i < 20; i += 1) l.reserve('victim', '5.5.5.5', 0);
+  assert.equal(l.reserve('victim', '6.6.6.6', 1001).allowed, true);
+});
+
+test('store is bounded by maxEntries', () => {
+  const l = createLoginLimiter({ ...opts, maxEntries: 10, maxIpAttempts: 1000 });
+  for (let i = 0; i < 50; i += 1) l.reserve(`u${i}`, `10.0.0.${i}`, 0);
+  assert.ok(l.size().users <= 10);
+  assert.ok(l.size().ips <= 10);
+});
+
+test('prune drops expired entries and keeps active ones', () => {
+  const l = createLoginLimiter(opts);
+  l.reserve('old', '1.1.1.1', 0);
+  l.reserve('new', '2.2.2.2', 900);
+  l.prune(1500);
+  assert.deepEqual(l.size(), { users: 1, ips: 1 });
 });

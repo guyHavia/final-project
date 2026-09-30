@@ -1,7 +1,13 @@
 import mongoose from 'mongoose';
 
 /** The four lifecycle states an article can be in. Single source of truth — no parallel booleans. */
-export const STATES = ['In Preparation', 'Pending Editor Approval', 'Published', 'Returned for Corrections'];
+export const STATE = {
+  IN_PREPARATION: 'In Preparation',
+  PENDING: 'Pending Editor Approval',
+  PUBLISHED: 'Published',
+  RETURNED: 'Returned for Corrections',
+};
+export const STATES = Object.values(STATE);
 
 /**
  * The shared category list (issue #4, P2-01 schema section: "constrained to a
@@ -21,6 +27,14 @@ export const CATEGORIES = [
   'opinion',
   'culture',
 ];
+
+/**
+ * The article's editable content and each field's max length. Single source of
+ * truth for what a reporter may write, what approval copies into `published`,
+ * and what "unsubmitted changes" compares.
+ */
+export const CONTENT_LIMITS = { title: 200, abstract: 500, body: 50_000, image: 2_000, category: 50 };
+export const CONTENT_FIELDS = Object.keys(CONTENT_LIMITS);
 
 /**
  * The frozen public snapshot of an article's most recently approved content.
@@ -62,7 +76,7 @@ const articleSchema = new mongoose.Schema(
     slug: { type: String, unique: true, lowercase: true, trim: true, sparse: true },
     category: { type: String, required: true, trim: true, enum: CATEGORIES },
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    state: { type: String, enum: STATES, default: 'In Preparation', required: true },
+    state: { type: String, enum: STATES, default: STATE.IN_PREPARATION, required: true },
 
     // Working copy — what the reporter edits, what autosave writes.
     // `title` is not required here so autosave can store a half-written draft;

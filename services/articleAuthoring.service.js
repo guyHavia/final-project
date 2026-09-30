@@ -1,7 +1,8 @@
-import { Article, CATEGORIES } from '../models/article.model.js';
+import { Article, CATEGORIES, STATE, CONTENT_LIMITS, CONTENT_FIELDS } from '../models/article.model.js';
+import { ROLE } from '../models/user.model.js';
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
-import { applyTransition } from './articleState.service.js';
+import { applyTransition, guardTransition, saveTransition, toActor } from './articleState.service.js';
 import { presentFullArticle } from './articleQuery.service.js';
 
 /**
@@ -9,12 +10,9 @@ import { presentFullArticle } from './articleQuery.service.js';
  * Every permission and validation rule is enforced here, on the server.
  */
 
-/** The only fields a client may write. Anything else (author, state, …) is a 400. */
-const LIMITS = { title: 200, abstract: 500, body: 50_000, image: 2_000, category: 50 };
-const EDITABLE_FIELDS = Object.keys(LIMITS);
 
 /** States a reporter may still edit their own article in. Editors may edit in any state. */
-const REPORTER_EDITABLE_STATES = ['In Preparation', 'Returned for Corrections', 'Published'];
+const REPORTER_EDITABLE_STATES = [STATE.IN_PREPARATION, STATE.RETURNED, STATE.PUBLISHED];
 
 function isHttpUrl(value) {
   try {
@@ -26,8 +24,8 @@ function isHttpUrl(value) {
 }
 
 /**
- * Checks a request body against the editable fields and returns the fields to
- * write. Modes differ only in what may be blank:
+ * Checks a request body against CONTENT_FIELDS (the only fields a client may
+ * write; anything else is a 400) and returns the fields to write. Modes differ only in what may be blank:
  * - `create` — title and category required and non-blank.
  * - `edit`   — at least one field; a title, if sent, must be non-blank.
  * - `autosave` — anything goes blank (a half-written draft), but never invalid.
@@ -42,10 +40,10 @@ function readContent(input, mode) {
 
   const fields = {};
   for (const [name, value] of Object.entries(input)) {
-    if (!EDITABLE_FIELDS.includes(name)) throw AppError.badRequest(`unknown field: ${name}`);
+    if (!CONTENT_FIELDS.includes(name)) throw AppError.badRequest(`unknown field: ${name}`);
     if (typeof value !== 'string') throw AppError.badRequest(`${name} must be a string`);
-    if (value.length > LIMITS[name]) {
-      throw AppError.badRequest(`${name} is too long (max ${LIMITS[name]} characters)`);
+    if (value.length > CONTENT_LIMITS[name]) {
+      throw AppError.badRequest(`${name} is too long (max ${CONTENT_LIMITS[name]} characters)`);
     }
     fields[name] = value;
   }
@@ -69,11 +67,6 @@ function readContent(input, mode) {
   return fields;
 }
 
-/** The session user as the state machine expects it. */
-function toActor(user) {
-  return { id: String(user._id), role: user.role };
-}
-
 /**
  * Loads an article and checks `user` may change its working copy:
  * editors always; reporters only their own (403), and not while it is Pending
@@ -82,7 +75,7 @@ function toActor(user) {
 async function loadEditable(id, user) {
   const article = await Article.findById(id);
   if (!article) throw AppError.notFound('article not found');
-  if (user.role === 'editor') return article;
+  if (user.role === ROLE.EDITOR) return article;
 
   if (String(article.author) !== String(user._id)) throw AppError.forbidden();
   if (!REPORTER_EDITABLE_STATES.includes(article.state)) {
@@ -138,8 +131,9 @@ export async function submitArticle(id, user) {
   const article = await Article.findById(id);
   if (!article) throw AppError.notFound('article not found');
 
-  applyTransition(article, 'Pending Editor Approval', toActor(user));
-  await article.save();
+  guardTransition(article);
+  applyTransition(article, STATE.PENDING, toActor(user));
+  await saveTransition(article);
   logger.info('article.submitted', { articleId: String(article._id), userId: String(user._id) });
   return presentFullArticle(article.toObject());
 }

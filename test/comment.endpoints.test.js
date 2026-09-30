@@ -6,10 +6,9 @@ import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import cookieParser from 'cookie-parser';
 
-import commentRoutes from '../routes/comment.routes.js';
+import { commentRoutes } from '../routes/comment.routes.js';
 import { Article } from '../models/article.model.js';
 import { Comment } from '../models/comment.model.js';
-import { AppError } from '../lib/AppError.js';
 
 let mongoServer;
 let app;
@@ -39,6 +38,7 @@ test.before(async () => {
     app.use('/api', commentRoutes);
 
     // Skeleton Terminal Error Handler Mock
+    // eslint-disable-next-line no-unused-vars -- Express identifies error handlers by their 4-argument arity
     app.use((err, req, res, next) => {
         if (err.name === 'ValidationError') {
             return res.status(400).json({ error: { message: err.message, code: 'validation' } });
@@ -253,4 +253,47 @@ test('HTTP List: a malformed cursor is a 400, not a server error', async () => {
     const res = await request(app).get(`/api/articles/${publishedArticle._id}/comments?cursor=garbage`);
     assert.equal(res.status, 400);
     assert.equal(res.body.error.code, 'bad_request');
+});
+
+
+test('HTTP Update: editor edits body; other fields and deviceId stay untouched, and it is not listed as a new comment', async () => {
+    const c = await Comment.create({ article: publishedArticle._id, authorName: 'Dana', body: 'original', deviceId: 'dev-1' });
+
+    const res = await request(app)
+        .patch(`/api/comments/${c._id}`)
+        .set('x-mock-role', 'editor')
+        .send({ body: '  edited text  ', authorName: 'Hacker', article: draftArticle._id });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.data.body, 'edited text');
+    assert.equal(res.body.data.authorName, 'Dana');
+    assert.equal(res.body.data.article, publishedArticle.id);
+    assert.equal(res.body.data.deviceId, undefined);
+
+    const stored = await Comment.findById(c._id);
+    assert.equal(stored.body, 'edited text');
+    assert.equal(stored.deviceId, 'dev-1');
+    assert.equal(await Comment.countDocuments(), 1);
+});
+
+test('HTTP Update: 401 without a session, 403 for a reporter', async () => {
+    const c = await Comment.create({ article: publishedArticle._id, authorName: 'Dana', body: 'original', deviceId: 'dev-1' });
+    await request(app).patch(`/api/comments/${c._id}`).send({ body: 'x' }).expect(401);
+    await request(app).patch(`/api/comments/${c._id}`).set('x-mock-role', 'reporter').send({ body: 'x' }).expect(403);
+    assert.equal((await Comment.findById(c._id)).body, 'original');
+});
+
+test('HTTP Update: 400 for a blank/over-long/missing body, 404 for an unknown id, 400 invalid_id for a bad id', async () => {
+    const c = await Comment.create({ article: publishedArticle._id, authorName: 'Dana', body: 'original', deviceId: 'dev-1' });
+    const patch = (id, payload) => request(app).patch(`/api/comments/${id}`).set('x-mock-role', 'editor').send(payload);
+
+    assert.equal((await patch(c._id, { body: '   ' })).status, 400);
+    assert.equal((await patch(c._id, { body: 'x'.repeat(2001) })).status, 400);
+    assert.equal((await patch(c._id, {})).status, 400);
+    assert.equal((await patch(c._id, { body: 42 })).status, 400);
+    assert.equal((await patch(new mongoose.Types.ObjectId(), { body: 'ok' })).status, 404);
+    const bad = await patch('not-an-id', { body: 'ok' });
+    assert.equal(bad.status, 400);
+    assert.equal(bad.body.error.code, 'invalid_id');
+    assert.equal((await Comment.findById(c._id)).body, 'original');
 });
