@@ -51,6 +51,19 @@ router.patch('/:id/autosave', requireRole('reporter', 'editor'), asyncHandler(au
 
 `200 → { "data": { "status": "ok" } }`. No auth. Liveness check.
 
+### Weather  — _P5_
+
+- `GET /api/weather` — no auth. Footer weather widget for `WEATHER_CITY`
+  (default `Tel Aviv,IL`), from OpenWeatherMap.
+  - `200 → { data: { tempC, description, icon, observedAt } }` — `observedAt`
+    is an ISO 8601 timestamp of the upstream fetch.
+  - Served from a server-side cache; the upstream is contacted at most once per
+    15 minutes (failed attempts count), and data older than 15 minutes is
+    never served.
+  - `503 { error: { message: "weather unavailable", code: "service_unavailable" } }`
+    when `WEATHER_API_KEY` is unset, or the upstream fails/times out (5 s) and
+    there is no fresh cached value. No placeholder data is ever returned.
+
 ### Auth  — _P1_
 
 Session is a signed `connect.sid` cookie (httpOnly, `sameSite=lax`, 7-day TTL),
