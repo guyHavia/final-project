@@ -338,7 +338,7 @@ textarea.field { padding: 10px 14px; resize: vertical; }
   .drawer-foot .btn { flex: 1 1 45%; }
 }
 
-/* =====================================================================
+/* ==============================================================
    Issue #55 — newsroom UX additions (toasts, invalid fields, tablet).
    Kept in one block at the end so other tickets' CSS edits merge cleanly.
    ===================================================================== */
@@ -391,3 +391,14 @@ textarea.field { padding: 10px 14px; resize: vertical; }
 .marker-badge { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: var(--surface); font-size: 0.7rem; font-weight: 700; }
 @media (min-width: 701px) and (max-width: 1024px) { .range-controls { grid-template-columns: 1fr 1fr; } .range-controls > div:first-child { grid-column: 1 / -1; } }
 @media (max-width: 700px) { .range-controls { gap: 10px; } .an-grid { gap: 14px; } }
+=======
+/* ---------- review panel: comment moderation (#56) ---------- */
+
+.comments-section { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+.comments-section h3 { font-size: 1.1rem; }
+.comments-section h3:focus { outline: none; }
+.comments-section #comments-status { margin: 6px 0 10px; }
+.comments-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+.comment-item { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.comment-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.comment-body { margin: 6px 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
