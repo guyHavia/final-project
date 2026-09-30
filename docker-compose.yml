@@ -3,7 +3,9 @@ services:
     image: mongo:7
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      # Loopback only: host tools (npm run dev, mongosh) can connect, the network cannot.
+      # The app container reaches mongo over the compose network, not this mapping.
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo_data:/data/db
     healthcheck:
