@@ -46,7 +46,7 @@ npm run dev      # dev server with auto-restart (no Docker needed if Mongo is up
 npm start        # plain server start
 npm test         # node --test — no DB required
 npm run lint     # eslint .
-npm run seed     # populate demo data and print login credentials
+npm run seed     # populate demo data and print login credentials (refuses NODE_ENV=production unless --force)
 ```
 
 ## Project structure
