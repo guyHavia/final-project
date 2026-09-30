@@ -24,6 +24,8 @@ docker compose exec app node seed/seed.js
 #    → http://localhost:3000
 ```
 
+> **MongoDB access:** the compose file publishes MongoDB on `127.0.0.1:27017` only (loopback), so other machines cannot reach it. It has no authentication, so never change the binding to `0.0.0.0`. From the host use `mongosh mongodb://127.0.0.1:27017/the-daily-web` or `npm run dev`; the app container reaches it over the compose network.
+
 ### Managing the App
 
 ```bash
