@@ -30,7 +30,7 @@ async function login(username) {
 /** Calls `/api/articles<path>` as `who` (null = guest) and returns `data`, asserting the status. */
 async function call(who, method, path, body, expected = 200) {
   const req = request(app)[method](`/api/articles${path}`);
-  if (who) req.set('Cookie', cookies[who]);
+  if (who) req.set('Cookie', cookies[who]).set('Sec-Fetch-Site', 'same-origin');
   const res = await req.send(body ?? {});
   assert.equal(res.status, expected, `${method.toUpperCase()} ${path}: ${JSON.stringify(res.body)}`);
   return res.body.data;

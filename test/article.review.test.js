@@ -56,7 +56,7 @@ function seedPendingRevision(slug = 'mars-rover-lands') {
   });
 }
 
-const as = (who, req) => (who ? req.set('Cookie', cookies[who]) : req);
+const as = (who, req) => (who ? req.set('Cookie', cookies[who]).set('Sec-Fetch-Site', 'same-origin') : req);
 const approve = (who, id) => as(who, request(app).post(`/api/articles/${id}/approve`).send({}));
 const sendBack = (who, id, body) => as(who, request(app).post(`/api/articles/${id}/return`).send(body));
 const remove = (who, id) => as(who, request(app).delete(`/api/articles/${id}`));

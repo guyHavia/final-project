@@ -6,6 +6,32 @@ import 'dotenv/config';
  */
 export const DEFAULT_SESSION_SECRET = 'dev-insecure-secret-change-me';
 
+/** Secret committed in .env.test; public, so never acceptable in production. */
+export const TEST_SESSION_SECRET =
+  '0db5075dde9211db4b742e8f6972a854e812ad219c9fb59576be6c6a2b001c9a';
+
+const MIN_PRODUCTION_SECRET_LENGTH = 32;
+
+function isWeakSecret(secret) {
+  return (
+    secret.length < MIN_PRODUCTION_SECRET_LENGTH ||
+    secret === DEFAULT_SESSION_SECRET ||
+    secret === TEST_SESSION_SECRET
+  );
+}
+
+/**
+ * TRUST_PROXY env -> Express 'trust proxy' value. Unset -> false; digits -> hop
+ * count; 'true'/'false' -> boolean; anything else (e.g. 'loopback', a CIDR) passes through.
+ */
+function parseTrustProxy(raw) {
+  if (raw === undefined || raw === '') return false;
+  if (/^\d+$/.test(raw)) return Number(raw);
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return raw;
+}
+
 /**
  * Build the process configuration from a source of env vars (defaults to
  * `process.env`). Pulled out as a pure function so the production guard
@@ -16,9 +42,9 @@ export function buildEnv(source = process.env) {
   const nodeEnv = source.NODE_ENV ?? 'development';
   const sessionSecret = source.SESSION_SECRET ?? DEFAULT_SESSION_SECRET;
 
-  if (nodeEnv === 'production' && sessionSecret === DEFAULT_SESSION_SECRET) {
+  if (nodeEnv === 'production' && isWeakSecret(sessionSecret)) {
     throw new Error(
-      'Refusing to start: SESSION_SECRET is unset (or equal to the known dev default) while NODE_ENV=production. ' +
+      `Refusing to start: SESSION_SECRET is unset, too short (< ${MIN_PRODUCTION_SECRET_LENGTH} chars) or a known committed value while NODE_ENV=production. ` +
         'Set a real, random SESSION_SECRET before running in production (see .env.example).'
     );
   }
@@ -28,6 +54,7 @@ export function buildEnv(source = process.env) {
     port: Number(source.PORT ?? 3000),
     mongoUri: source.MONGODB_URI ?? 'mongodb://127.0.0.1:27017/the-daily-web',
     sessionSecret,
+    trustProxy: parseTrustProxy(source.TRUST_PROXY),
     weatherApiKey: source.WEATHER_API_KEY,
     weatherCity: source.WEATHER_CITY ?? 'Tel Aviv,IL',
   };
