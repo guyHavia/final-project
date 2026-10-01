@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head', { title: 'The Daily Web', description: 'Stories that move the day.', canonical: '/' }) %>
+</head>
+<body class="public-page">
+  <%- include('partials/header') %>
+
+  <main class="page public-feed-main">
+    <header class="feed-header">
+      <h1>Latest Stories</h1>
+      <p>The day's breaking news, analysis, and opinion.</p>
+    </header>
+
+    <div class="feed-controls panel">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <label class="sr" for="feed-search">Search headlines</label>
+        <input class="field" id="feed-search" type="search" placeholder="Search headlines…" value="<%= query.q || '' %>" autocomplete="off" />
+      </div>
+
+      <div class="filter-group">
+        <label class="sr" for="feed-category">Category</label>
+        <select class="field" id="feed-category">
+          <option value="">All categories</option>
+          <% const cats = ['politics', 'business', 'technology', 'science', 'health', 'sports', 'entertainment', 'world', 'opinion', 'culture']; %>
+          <% for (const cat of cats) { %>
+            <option value="<%= cat %>" <%= query.category === cat ? 'selected' : '' %>><%= cat %></option>
+          <% } %>
+        </select>
+
+        <label class="sr" for="feed-sort">Sort by</label>
+        <select class="field" id="feed-sort">
+          <option value="date" <%= query.sort === 'date' || !query.sort ? 'selected' : '' %>>Newest first</option>
+          <option value="popularity" <%= query.sort === 'popularity' ? 'selected' : '' %>>Most read</option>
+        </select>
+
+        <button type="button" id="toggle-viewed-btn" class="btn btn-ghost btn-sm" aria-pressed="false">Hide viewed</button>
+      </div>
+    </div>
+
+    <section id="article-feed-section" aria-label="Published articles">
+      <ul id="article-card-list" class="article-cards">
+        <% if (items && items.length > 0) { %>
+          <% for (const item of items) { %>
+            <li class="article-card" data-id="<%= item.id %>" data-slug="<%= item.slug %>">
+              <% if (item.image) { %>
+                <figure class="card-thumb">
+                  <img src="<%= item.image %>" alt="<%= item.title %>" loading="lazy" />
+                </figure>
+              <% } %>
+              <div class="card-content">
+                <span class="card-category"><%= item.category %></span>
+                <h2><a href="/article/<%= item.slug || item.id %>"><%= item.title %></a></h2>
+                <% if (item.abstract) { %>
+                  <p class="card-abstract"><%= item.abstract %></p>
+                <% } %>
+                <div class="card-meta">
+                  <span class="byline"><%= item.author.displayName %></span>
+                  <span>&bull;</span>
+                  <time datetime="<%= new Date(item.publishedAt).toISOString() %>"><%= new Date(item.publishedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) %></time>
+                  <span>&bull;</span>
+                  <span class="view-count"><%= item.viewCount %> views</span>
+                </div>
+              </div>
+            </li>
+          <% } %>
+        <% } else { %>
+          <li class="empty-state">
+            <p>No published articles found matching your criteria.</p>
+          </li>
+        <% } %>
+      </ul>
+
+      <div id="feed-status" class="feed-status" role="status" aria-live="polite">
+        <button id="retry-btn" class="btn btn-secondary" hidden>Retry loading more</button>
+        <p id="end-of-feed-msg" class="muted" <%= nextCursor ? 'hidden' : '' %>>You've reached the end of the feed.</p>
+      </div>
+      <div id="scroll-sentinel" aria-hidden="true"></div>
+    </section>
+  </main>
+
+  <%- include('partials/footer') %>
+
+  <!-- Hidden bootstrap data for client hydration -->
+  <div id="feed-bootstrap" hidden data-next-cursor="<%= nextCursor || '' %>" data-query-q="<%= query.q || '' %>" data-query-category="<%= query.category || '' %>" data-query-sort="<%= query.sort || 'date' %>"></div>
+
+  <script type="module" src="/js/feed.js"></script>
+</body>
+</html>

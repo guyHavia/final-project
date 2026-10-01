@@ -1,0 +1,14 @@
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title><%= locals.title ? `${locals.title} — The Daily Web` : 'The Daily Web' %></title>
+<meta name="description" content="<%= locals.description || 'Stories that move the day. The Daily Web newsroom.' %>" />
+<% if (locals.canonical) { %>
+<link rel="canonical" href="<%= locals.canonical %>" />
+<% } %>
+<% if (locals.ogImage) { %>
+<meta property="og:image" content="<%= locals.ogImage %>" />
+<% } %>
+<meta property="og:title" content="<%= locals.title || 'The Daily Web' %>" />
+<meta property="og:description" content="<%= locals.description || 'Stories that move the day.' %>" />
+<meta property="og:type" content="<%= locals.ogType || 'website' %>" />
+<link rel="stylesheet" href="/css/public.css" />
