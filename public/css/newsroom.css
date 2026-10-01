@@ -391,7 +391,7 @@ textarea.field { padding: 10px 14px; resize: vertical; }
 .marker-badge { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; color: var(--surface); font-size: 0.7rem; font-weight: 700; }
 @media (min-width: 701px) and (max-width: 1024px) { .range-controls { grid-template-columns: 1fr 1fr; } .range-controls > div:first-child { grid-column: 1 / -1; } }
 @media (max-width: 700px) { .range-controls { gap: 10px; } .an-grid { gap: 14px; } }
-=======
+
 /* ---------- review panel: comment moderation (#56) ---------- */
 
 .comments-section { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
