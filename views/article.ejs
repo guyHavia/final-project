@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('partials/head', { 
+    title: article.title, 
+    description: article.abstract || 'The Daily Web news story.', 
+    canonical: `/article/${article.slug || article.id}`,
+    ogImage: article.image,
+    ogType: 'article'
+  }) %>
+</head>
+<body class="public-page article-page-body">
+  <%- include('partials/header') %>
+
+  <main class="page article-main">
+    <article class="article-container" data-article-id="<%= article.id %>">
+      <header class="article-header">
+        <span class="card-category"><%= article.category %></span>
+        <h1><%= article.title %></h1>
+        <% if (article.abstract) { %>
+          <p class="article-abstract"><%= article.abstract %></p>
+        <% } %>
+        <div class="card-meta">
+          <span class="byline"><%= article.author.displayName %></span>
+          <span>&bull;</span>
+          <time datetime="<%= new Date(article.publishedAt || article.createdAt).toISOString() %>">
+            <%= new Date(article.publishedAt || article.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) %>
+          </time>
+          <span>&bull;</span>
+          <span class="view-count"><%= article.viewCount %> views</span>
+        </div>
+      </header>
+
+      <% if (article.image) { %>
+        <figure class="article-featured-image">
+          <img src="<%= article.image %>" alt="<%= article.title %>" loading="lazy" />
+        </figure>
+      <% } %>
+
+      <!-- SEO Contract: Full body text rendered in initial HTML -->
+      <div class="article-body">
+        <%- article.body.replace(/\n/g, '<br>') %>
+      </div>
+    </article>
+
+    <!-- Comments Section -->
+    <section id="comments-section" class="comments-section" data-article-id="<%= article.id %>" aria-labelledby="comments-heading">
+      <div class="comments-header-row">
+        <h2 id="comments-heading">Discussion</h2>
+        <span id="comment-count-live" class="sr-only" aria-live="polite">0 comments</span>
+      </div>
+
+      <form id="comment-form" class="comment-form panel" novalidate>
+        <h3>Leave a comment</h3>
+        <div id="comment-form-error" class="field-error" role="alert" hidden></div>
+        
+        <label for="comment-author">Your Name</label>
+        <input class="field" id="comment-author" name="authorName" type="text" required maxlength="100" autocomplete="name" />
+
+        <label for="comment-body">Comment</label>
+        <textarea class="field" id="comment-body" name="body" rows="4" required maxlength="2000" placeholder="What do you think?"></textarea>
+
+        <button type="submit" class="btn btn-primary" id="submit-comment-btn">Post comment</button>
+      </form>
+
+      <div class="comments-list-wrapper">
+        <ul id="comments-list" class="comments-list"></ul>
+        <div class="comments-status-area">
+          <button id="load-more-comments" type="button" class="btn btn-ghost" hidden>Load older comments</button>
+          <p id="comments-empty-msg" class="muted" hidden>No comments yet. Be the first to share your thoughts!</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <%- include('partials/footer') %>
+  <script type="module" src="/js/article.js"></script>
+</body>
+</html>
