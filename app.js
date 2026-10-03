@@ -8,6 +8,7 @@ import { notFound, errorHandler } from './middleware/error.js';
 import { env } from './config/env.js';
 import { securityHeaders, requireSameOrigin } from './middleware/security.js';
 import { newsroomRouter } from './routes/newsroom.routes.js';
+import publicRoutes from './routes/public.routes.js';
 
 import cookieParser from 'cookie-parser';
 import { assignDeviceId } from './middleware/rateLimit.js';
@@ -34,8 +35,8 @@ export function createApp() {
   app.set('views', path.join(import.meta.dirname, 'views'));
   app.use(express.static(path.join(import.meta.dirname, 'public')));
 
+  app.use(publicRoutes); // P3: / (home feed), /article/:slug
   app.use(newsroomRouter); // P4: /login, /newsroom, /newsroom/review, /newsroom/analytics
-  // P3 mounts their own page router (/, /article/:slug) here too.
 
   app.use('/api', requireSameOrigin(), apiRouter);
 

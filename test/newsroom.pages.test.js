@@ -163,17 +163,23 @@ describe('shared newsroom header', () => {
   });
 });
 
+// `/` is the public home feed (P3), open to everyone — it no longer redirects to
+// /login. Staff reach their area through the header's "Newsroom" link (/login).
 describe('GET /', () => {
-  test('redirects a signed-out visitor to /login', async () => {
+  test('shows the public home feed to a signed-out visitor', async () => {
     const res = await request(app).get('/');
-    assert.equal(res.status, 302);
-    assert.equal(res.headers.location, '/login');
+    assert.equal(res.status, 200);
+    assert.match(res.text, /<header class="site-header"/);
   });
 
-  test('redirects a signed-in reporter on to /newsroom via /login', async () => {
+  test('shows a signed-in reporter the public feed too, with a link to the newsroom', async () => {
     const cookie = await cookieFor('rep1');
-    const res = await request(app).get('/').set('Cookie', cookie).redirects(1);
-    assert.equal(res.status, 302);
-    assert.equal(res.headers.location, '/newsroom');
+    const res = await request(app).get('/').set('Cookie', cookie);
+    assert.equal(res.status, 200);
+    assert.match(res.text, /href="\/login"[^>]*>Newsroom</);
+
+    const viaNewsroomLink = await request(app).get('/login').set('Cookie', cookie);
+    assert.equal(viaNewsroomLink.status, 302);
+    assert.equal(viaNewsroomLink.headers.location, '/newsroom');
   });
 });

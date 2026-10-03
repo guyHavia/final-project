@@ -4,11 +4,11 @@
   <%- include('partials/head', { title: 'Page Not Found', description: 'The page you are looking for does not exist.' }) %>
 </head>
 <body class="public-page error-page">
-  <%- include('partials/header') %>
-  <main class="page error-content" style="text-align: center; padding: 4rem 1rem;">
+  <%- include('partials/public-header') %>
+  <main class="page error-content">
     <h1>404 — Page Not Found</h1>
     <p>The story or page you requested could not be found or has not been published.</p>
-    <p><a href="/" class="btn btn-primary" style="margin-top: 1rem;">Return to Home Feed</a></p>
+    <p><a href="/" class="btn btn-primary">Return to Home Feed</a></p>
   </main>
   <%- include('partials/footer') %>
 </body>

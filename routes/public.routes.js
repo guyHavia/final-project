@@ -1,6 +1,6 @@
 import express from 'express';
 import { listPublicFeed, getArticleForRender } from '../services/articleQuery.service.js';
-import { recordView } from '../services/stats.service.js';
+import { recordArticleView } from '../services/articleViews.service.js';
 
 const router = express.Router();
 
@@ -30,8 +30,9 @@ router.get('/article/:slug', async (req, res, next) => {
       return res.status(404).render('404');
     }
 
-    // D10 & P2-08: Record view once server-side per full render
-    await recordView(article.id);
+    // D10 & P2-08: count the view once, server-side, per full render. Logged-in
+    // staff (req.user) are not counted; this also bumps viewCount for popularity.
+    await recordArticleView(article.id, { viewer: req.user });
 
     res.render('article', { article });
   } catch (err) {
