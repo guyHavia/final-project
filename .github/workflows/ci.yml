@@ -11,8 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e589999cb84f6af0590a3692ea2837f48e # v7.0.1
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v7.0.0
-    with:
-      node-version: 20
+        with:
+          node-version: 20
       - run: npm ci
       - run: npm run lint
       - run: npm test
