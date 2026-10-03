@@ -51,9 +51,9 @@
               <% } %>
               <div class="card-content">
                 <span class="card-category"><%= item.category %></span>
-                <h2><a href="/article/<%= item.slug || item.id %>"><%= item.title %></a></h2>
+                <h2 dir="auto"><a href="/article/<%= item.slug || item.id %>"><%= item.title %></a></h2>
                 <% if (item.abstract) { %>
-                  <p class="card-abstract"><%= item.abstract %></p>
+                  <p class="card-abstract" dir="auto"><%= item.abstract %></p>
                 <% } %>
                 <div class="card-meta">
                   <span class="byline"><%= item.author.displayName %></span>

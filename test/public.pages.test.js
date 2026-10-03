@@ -155,3 +155,54 @@ describe('the article page counts views (P2-08)', () => {
     assert.match(second.text, /\b1 views\b/, 'the count rendered before this visit was recorded');
   });
 });
+
+describe('article text is safe, readable in any language, and images can load', () => {
+  async function publish(slug, fields) {
+    return Article.create({
+      category: 'world', author: users.reporter._id, state: 'Published', slug, firstPublishedAt: FIRST,
+      ...fields,
+      published: { category: 'world', publishedAt: FIRST, version: 1, ...fields },
+    });
+  }
+
+  test('HTML typed into an article body is shown as text, never inserted as markup (no stored XSS)', async () => {
+    await publish('xss-attempt', {
+      title: 'Harmless title',
+      body: 'Hello <b>bold</b>\n<img src="https://evil.example/x.png" onerror="alert(1)"><a href="https://phish.example">click</a>',
+    });
+    const res = await page('/article/xss-attempt');
+    assert.equal(res.status, 200);
+    assert.doesNotMatch(res.text, /<img src="https:\/\/evil\.example/);
+    assert.doesNotMatch(res.text, /<a href="https:\/\/phish\.example"/);
+    assert.doesNotMatch(res.text, /<b>bold<\/b>/);
+    assert.match(res.text, /Hello &lt;b&gt;bold&lt;\/b&gt;/);
+  });
+
+  test('line breaks in the body become separate paragraphs', async () => {
+    await publish('two-paragraphs', { title: 'Two', body: 'First paragraph.\n\nSecond paragraph.' });
+    const res = await page('/article/two-paragraphs');
+    assert.match(res.text, /<p dir="auto">First paragraph\.<\/p>\s*<p dir="auto">Second paragraph\.<\/p>/);
+  });
+
+  test('titles, abstracts and body text use dir="auto", so Hebrew reads right-to-left', async () => {
+    await publish('hebrew-story', { title: 'כותרת בעברית', abstract: 'תקציר קצר', body: 'פסקה ראשונה.' });
+    const article = await page('/article/hebrew-story');
+    assert.match(article.text, /<h1 dir="auto">כותרת בעברית<\/h1>/);
+    assert.match(article.text, /<p class="article-abstract" dir="auto">תקציר קצר<\/p>/);
+    assert.match(article.text, /<p dir="auto">פסקה ראשונה\.<\/p>/);
+
+    const feed = await page('/');
+    assert.match(feed.text, /<h2 dir="auto"><a href="\/article\/hebrew-story">כותרת בעברית<\/a><\/h2>/);
+    assert.match(feed.text, /<p class="card-abstract" dir="auto">תקציר קצר<\/p>/);
+  });
+
+  test('the security policy allows https images (article photos are links to other sites)', async () => {
+    const res = await page('/');
+    assert.match(res.headers['content-security-policy'], /img-src 'self' data: https:/);
+  });
+
+  test('the browser tab title is not repeated on the home page', async () => {
+    assert.match((await page('/')).text, /<title>The Daily Web<\/title>/);
+    assert.match((await page('/article/mars-rover-lands')).text, /<title>Mars Rover Lands — The Daily Web<\/title>/);
+  });
+});
