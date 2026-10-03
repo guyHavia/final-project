@@ -112,6 +112,6 @@ export function initShell(user) {
 
   $('logout-button').addEventListener('click', async () => {
     await logout();
-    window.location.href = '/login';
+    window.location.href = '/';
   });
 }
