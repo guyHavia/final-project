@@ -4,11 +4,14 @@
   <%- include('partials/head', { title: 'The Daily Web', description: 'Stories that move the day.', canonical: '/' }) %>
 </head>
 <body class="public-page">
-  <%- include('partials/public-header') %>
+  <%- include('partials/public-header', { activeCategory }) %>
 
-  <main class="page public-feed-main">
+  <main class="page home-layout">
+    <%- include('partials/public-weather') %>
+
+   <div class="home-main">
     <header class="feed-header">
-      <h1>Latest Stories</h1>
+      <h1><%= activeCategory ? activeCategory : 'Latest Stories' %></h1>
       <p>The day's breaking news, analysis, and opinion.</p>
     </header>
 
@@ -20,15 +23,8 @@
       </div>
 
       <div class="filter-group">
-        <label class="sr" for="feed-category">Category</label>
-        <select class="field" id="feed-category">
-          <option value="">All categories</option>
-          <% const cats = ['politics', 'business', 'technology', 'science', 'health', 'sports', 'entertainment', 'world', 'opinion', 'culture']; %>
-          <% for (const cat of cats) { %>
-            <option value="<%= cat %>" <%= query.category === cat ? 'selected' : '' %>><%= cat %></option>
-          <% } %>
-        </select>
-
+        <%# The category is chosen in the masthead's category bar (?category=...);
+            feed.js reads it from #feed-bootstrap, so no dropdown is needed here. %>
         <label class="sr" for="feed-sort">Sort by</label>
         <select class="field" id="feed-sort">
           <option value="date" <%= query.sort === 'date' || !query.sort ? 'selected' : '' %>>Newest first</option>
@@ -50,7 +46,7 @@
                 </figure>
               <% } %>
               <div class="card-content">
-                <span class="card-category"><%= item.category %></span>
+                <span class="card-category cat-<%= item.category %>"><%= item.category %></span>
                 <h2 dir="auto"><a href="/article/<%= item.slug || item.id %>"><%= item.title %></a></h2>
                 <% if (item.abstract) { %>
                   <p class="card-abstract" dir="auto"><%= item.abstract %></p>
@@ -78,6 +74,9 @@
       </div>
       <div id="scroll-sentinel" aria-hidden="true"></div>
     </section>
+   </div>
+
+    <%- include('partials/public-most-read', { mostRead }) %>
   </main>
 
   <%- include('partials/footer') %>
@@ -86,5 +85,6 @@
   <div id="feed-bootstrap" hidden data-next-cursor="<%= nextCursor || '' %>" data-query-q="<%= query.q || '' %>" data-query-category="<%= query.category || '' %>" data-query-sort="<%= query.sort || 'date' %>"></div>
 
   <script type="module" src="/js/feed.js"></script>
+  <script type="module" src="/js/weather.js"></script>
 </body>
 </html>

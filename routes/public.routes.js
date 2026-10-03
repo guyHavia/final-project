@@ -4,19 +4,30 @@ import { recordArticleView } from '../services/articleViews.service.js';
 
 const router = express.Router();
 
+/** The sidebar's "Most read" list: the 5 public articles with the most views. */
+async function mostRead() {
+  const { items } = await listPublicFeed({ sort: 'popularity', limit: 5 });
+  return items;
+}
+
 router.get('/', async (req, res, next) => {
   try {
     const { q, category, sort } = req.query;
-    const result = await listPublicFeed({
-      q,
-      category,
-      sort: sort || 'date',
-      limit: 20
-    });
+    const [result, popular] = await Promise.all([
+      listPublicFeed({
+        q,
+        category,
+        sort: sort || 'date',
+        limit: 20
+      }),
+      mostRead()
+    ]);
     res.render('index', {
       items: result.items,
       nextCursor: result.nextCursor,
-      query: { q: q || '', category: category || '', sort: sort || 'date' }
+      query: { q: q || '', category: category || '', sort: sort || 'date' },
+      mostRead: popular,
+      activeCategory: category || ''
     });
   } catch (err) {
     next(err);
@@ -34,7 +45,7 @@ router.get('/article/:slug', async (req, res, next) => {
     // staff (req.user) are not counted; this also bumps viewCount for popularity.
     await recordArticleView(article.id, { viewer: req.user });
 
-    res.render('article', { article });
+    res.render('article', { article, mostRead: await mostRead(), activeCategory: article.category });
   } catch (err) {
     next(err);
   }

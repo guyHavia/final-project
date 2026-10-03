@@ -10,12 +10,13 @@
   }) %>
 </head>
 <body class="public-page article-page-body">
-  <%- include('partials/public-header') %>
+  <%- include('partials/public-header', { activeCategory }) %>
 
-  <main class="page article-main">
+  <main class="page article-layout">
+   <div class="article-main">
     <article class="article-container" data-article-id="<%= article.id %>">
       <header class="article-header">
-        <span class="card-category"><%= article.category %></span>
+        <span class="card-category cat-<%= article.category %>"><%= article.category %></span>
         <h1 dir="auto"><%= article.title %></h1>
         <% if (article.abstract) { %>
           <p class="article-abstract" dir="auto"><%= article.abstract %></p>
@@ -75,9 +76,14 @@
         </div>
       </div>
     </section>
+   </div>
+
+    <%- include('partials/public-weather') %>
+    <%- include('partials/public-most-read', { mostRead }) %>
   </main>
 
   <%- include('partials/footer') %>
   <script type="module" src="/js/article.js"></script>
+  <script type="module" src="/js/weather.js"></script>
 </body>
 </html>

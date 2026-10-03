@@ -1,0 +1,22 @@
+<%
+  /*
+    Sidebar "Most read" box: `mostRead` is the 5 most-viewed public articles.
+    In the right column on wide screens, below the stories on phones.
+  */
+  const popular = locals.mostRead || [];
+%>
+<% if (popular.length > 0) { %>
+<aside class="sidebar sidebar-popular" aria-labelledby="most-read-heading">
+  <section class="sidebar-box">
+    <h2 id="most-read-heading" class="sidebar-title">Most read</h2>
+    <ol class="most-read">
+      <% for (const item of popular) { %>
+      <li>
+        <span class="most-read-title" dir="auto"><a href="/article/<%= item.slug || item.id %>"><%= item.title %></a></span>
+        <span class="most-read-meta"><span class="card-category cat-<%= item.category %>"><%= item.category %></span> · <%= item.viewCount %> views</span>
+      </li>
+      <% } %>
+    </ol>
+  </section>
+</aside>
+<% } %>

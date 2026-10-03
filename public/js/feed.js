@@ -73,6 +73,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let isLoading = false;
 
+  // If loading the next page fails (e.g. a network hiccup), try again by
+  // itself after 2s, 4s and 8s; the Retry button only appears after that.
+  const MAX_AUTO_RETRIES = 3;
+  let failedAttempts = 0;
+
   async function fetchFeed(reset = false) {
     if (isLoading) return;
     isLoading = true;
@@ -123,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
           li.innerHTML = `
             ${thumbHtml}
             <div class="card-content">
-              <span class="card-category">${escapeHtml(item.category)}</span>
+              <span class="card-category cat-${escapeHtml(item.category)}">${escapeHtml(item.category)}</span>
               <h2 dir="auto"><a href="/article/${escapeHtml(item.slug || item.id)}">${escapeHtml(item.title)}</a></h2>
               ${item.abstract ? `<p class="card-abstract" dir="auto">${escapeHtml(item.abstract)}</p>` : ''}
               <div class="card-meta">
@@ -142,9 +147,15 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       applyViewedState();
+      failedAttempts = 0;
     } catch (err) {
       console.error(err);
-      if (retryBtn) retryBtn.hidden = false;
+      failedAttempts += 1;
+      if (failedAttempts <= MAX_AUTO_RETRIES) {
+        setTimeout(() => fetchFeed(reset), 1000 * 2 ** failedAttempts);
+      } else if (retryBtn) {
+        retryBtn.hidden = false;
+      }
     } finally {
       isLoading = false;
     }
@@ -164,7 +175,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { rootMargin: '200px' });
 
   if (sentinel) observer.observe(sentinel);
-  if (retryBtn) retryBtn.addEventListener('click', () => fetchFeed(false));
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      failedAttempts = 0; // a manual retry gets a fresh set of automatic retries
+      fetchFeed(false);
+    });
+  }
 
   function updateURL() {
     const params = new URLSearchParams();
