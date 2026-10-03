@@ -33,7 +33,9 @@ document.addEventListener('DOMContentLoaded', () => {
       seen.add(id);
       try {
         localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
-      } catch {}
+      } catch {
+        // Storage blocked or full (e.g. private mode): the "viewed" mark just isn't remembered.
+      }
     }
   }
 
