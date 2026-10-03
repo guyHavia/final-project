@@ -11,6 +11,7 @@ import {
   buildViewEvents,
   createRng,
 } from '../seed/seedData.js';
+import { STORIES } from '../seed/content.js';
 
 const HOUR = 60 * 60 * 1000;
 const NOW = Date.parse('2026-06-15T12:00:00Z');
@@ -41,16 +42,31 @@ describe('seed data: articles', () => {
       assert.doesNotMatch(a.body, /This is the body|lorem/i);
       assert.ok(a.title.length > 10 && a.abstract.length > 10 && a.body.length > 100);
     }
-    assert.ok(articles.some((a) => /[֐-׿]/.test(a.title)), 'has Hebrew titles');
-    assert.ok(articles.some((a) => /^[A-Za-z]/.test(a.title)), 'has English titles');
     assert.equal(new Set(articles.map((a) => a.title)).size, articles.length, 'titles are unique');
   });
 
-  test('every article and published copy has an http(s) image', () => {
+  test('all demo content is English: titles, abstracts and bodies', () => {
+    const HEBREW = /[֐-׿]/;
     for (const a of articles) {
-      assert.match(a.image, /^https?:\/\//);
-      if (a.published) assert.match(a.published.image, /^https?:\/\//);
+      for (const text of [a.title, a.abstract, a.body, a.editorNote ?? '']) {
+        assert.doesNotMatch(text, HEBREW, `Hebrew in "${a.title}"`);
+      }
+      if (a.published) assert.doesNotMatch(a.published.body, HEBREW);
     }
+  });
+
+  test('every article has an Unsplash photo chosen for its story', () => {
+    const UNSPLASH = /^https:\/\/images\.unsplash\.com\/photo-[0-9a-f-]+\?/;
+    for (const a of articles) {
+      assert.match(a.image, UNSPLASH);
+      if (a.published) assert.equal(a.published.image, a.image, 'published copy keeps the story photo');
+    }
+  });
+
+  test('the 100 stories each have their own photo (no story shares a picture)', () => {
+    const all = Object.values(STORIES).flat();
+    assert.equal(all.length, 100);
+    assert.equal(new Set(all.map((s) => s.image)).size, 100);
   });
 
   test('published articles are consistent: history, versions and working copy', () => {
@@ -126,6 +142,14 @@ describe('seed data: view events', () => {
 });
 
 describe('seed data: comments', () => {
+  test('are in English, like the articles', () => {
+    for (const a of build().filter((x) => x.state === 'Published').slice(0, 30)) {
+      for (const c of buildComments(a, NOW, createRng(5))) {
+        assert.doesNotMatch(`${c.authorName} ${c.body}`, /[֐-׿]/);
+      }
+    }
+  });
+
   test('are valid for the Comment schema limits and follow publication', () => {
     const a = build().find((x) => x.state === 'Published');
     for (const c of buildComments(a, NOW, createRng(3))) {

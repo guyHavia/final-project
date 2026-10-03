@@ -81,7 +81,7 @@ function contentFor(category, k, rng) {
     abstract: story.abstract,
     body: [story.lead, fillers[first], fillers[second]].join('\n\n'),
     category,
-    image: `https://picsum.photos/seed/${category}-${String(k).padStart(2, '0')}/800/450`,
+    image: story.image,
   };
 }
 
