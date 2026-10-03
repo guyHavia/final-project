@@ -80,6 +80,7 @@ lib/
   AppError.js      client-safe error with HTTP status + code
   asyncHandler.js  forwards async route errors to Express
   respond.js       sendData(res, data) — the { data } success envelope
+  cursor.js        opaque keyset-pagination cursor (encode / decode)  (P2)
 middleware/
   error.js         notFound + terminal errorHandler
   auth.js          requireAuth, requireRole, loadUser         (P1)
@@ -87,12 +88,22 @@ middleware/
   rateLimit.js     guest comment limit                        (P3)
 models/            user | article | comment | viewEvent
 controllers/       one per resource
+  article.controller.js   thin handlers for every /api/articles endpoint  (P2)
 routes/            one per resource, mounted under /api in routes/index.js;
-                   newsroom.routes.js serves the pages (/login, /newsroom*)
-views/             EJS: login, newsroom*, partials            (P4; public pages P3, not built yet)
+                   public.routes.js serves the public pages (/, /article/:slug)  (P3)
+                   newsroom.routes.js serves the newsroom pages (/login, /newsroom*)  (P4)
+  article.routes.js       /api/articles: feed, mine, read, write, review  (P2)
+views/             EJS: index, article, 404 (P3); login, newsroom* (P4); partials
 public/            client JS + CSS                            (P3 / P4)
-services/          articleAuthoring | articleQuery | articleReview |
-                   articleState | articleViews | stats | weather
+services/          business logic, called by the controllers
+  articleState.service.js      article lifecycle: legal transitions + guards  (P2)
+  articleQuery.service.js      feed, newsroom, my articles, one article,
+                               getArticleForRender (article page, SEO)        (P2)
+  articleAuthoring.service.js  create, edit, autosave, submit                  (P2)
+  articleReview.service.js     approve, return with a note, delete             (P2)
+  articleViews.service.js      recordArticleView: counts an article page view  (P2)
+  stats.service.js             recordView + Impact Analytics series            (P1)
+  weather.service.js           weather, cached server-side                     (P5)
 seed/seed.js       demo dataset                               (P5)
 test/              node --test files (*.test.js), support/mongo.js
 test.preload.js    loads .env.test before the suite
