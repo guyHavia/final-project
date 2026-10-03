@@ -1,0 +1,15 @@
+<%
+  /*
+    Sidebar weather box (the brief's weather widget), filled by
+    public/js/weather.js from /api/weather. On wide screens it sits at the top
+    of the right column; on phones the home page shows it above the stories.
+  */
+%>
+<aside class="sidebar sidebar-weather" aria-labelledby="weather-heading">
+  <section class="sidebar-box weather-box">
+    <h2 id="weather-heading" class="sidebar-title">Weather</h2>
+    <div id="weather-widget" class="weather-widget" data-endpoint="/api/weather" aria-live="polite">
+      <p class="weather-loading">Loading weather…</p>
+    </div>
+  </section>
+</aside>

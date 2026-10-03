@@ -206,3 +206,83 @@ describe('article text is safe, readable in any language, and images can load', 
     assert.match((await page('/article/mars-rover-lands')).text, /<title>Mars Rover Lands — The Daily Web<\/title>/);
   });
 });
+
+describe('news-site layout: masthead, categories, sidebar, theme', () => {
+  async function publishWithViews(slug, title, viewCount, category = 'world') {
+    return Article.create({
+      title, body: 'Body', category, author: users.reporter._id, state: 'Published', slug,
+      firstPublishedAt: FIRST, viewCount,
+      published: { title, body: 'Body', category, publishedAt: FIRST, version: 1 },
+    });
+  }
+
+  test("the masthead shows today's date and a link per category", async () => {
+    const res = await page('/');
+    assert.match(res.text, /<time class="masthead-date" datetime="\d{4}-\d{2}-\d{2}">/);
+    for (const category of ['politics', 'business', 'technology', 'science', 'health', 'sports', 'entertainment', 'world', 'opinion', 'culture']) {
+      assert.ok(res.text.includes(`<a class="category-link cat-${category}" href="/?category=${category}"`), category);
+    }
+  });
+
+  test('the selected category is marked in the category bar', async () => {
+    const res = await page('/?category=science');
+    assert.match(res.text, /<a class="category-link cat-science" href="\/\?category=science" aria-current="page">/);
+    assert.doesNotMatch(res.text, /href="\/\?category=sports" aria-current/);
+  });
+
+  test('every public page has the dark/light toggle and loads the theme script in <head>', async () => {
+    for (const path of ['/', '/article/mars-rover-lands', '/article/no-such-story']) {
+      const res = await page(path);
+      const head = res.text.slice(0, res.text.indexOf('</head>'));
+      assert.match(head, /<script src="\/js\/theme\.js"><\/script>/, `${path}: theme script`);
+      assert.match(res.text, /<button type="button" id="theme-toggle"/, `${path}: toggle button`);
+    }
+  });
+
+  test('the home sidebar lists the 5 most-read stories, most viewed first', async () => {
+    await publishWithViews('quiet', 'Quiet Story', 1);
+    await publishWithViews('top', 'Top Story', 900);
+    await publishWithViews('second', 'Second Story', 500);
+    await publishWithViews('third', 'Third Story', 300);
+    await publishWithViews('fourth', 'Fourth Story', 200);
+    await publishWithViews('fifth', 'Fifth Story', 100);
+
+    const res = await page('/');
+    const box = res.text.slice(res.text.indexOf('id="most-read-heading"'));
+    const mostRead = box.slice(0, box.indexOf('</ol>'));
+    const titles = [...mostRead.matchAll(/<a href="\/article\/[^"]+">([^<]+)<\/a>/g)].map((m) => m[1]);
+    assert.deepEqual(titles, ['Top Story', 'Second Story', 'Third Story', 'Fourth Story', 'Fifth Story']);
+  });
+
+  test('the weather widget sits in the sidebar of the home and article pages, not the footer', async () => {
+    for (const path of ['/', '/article/mars-rover-lands']) {
+      const res = await page(path);
+      const sidebar = res.text.slice(res.text.indexOf('<aside class="sidebar sidebar-weather"'), res.text.indexOf('</aside>'));
+      assert.match(sidebar, /id="weather-widget"/, `${path}: weather in sidebar`);
+      assert.match(res.text, /<script type="module" src="\/js\/weather\.js"><\/script>/, `${path}: weather script`);
+      const footer = res.text.slice(res.text.indexOf('<footer'));
+      assert.doesNotMatch(footer, /weather-widget/, `${path}: not in footer`);
+    }
+  });
+
+  test('on the home page the weather box comes before the stories in the page (shown first on phones)', async () => {
+    const res = await page('/');
+    const weather = res.text.indexOf('id="weather-widget"');
+    const stories = res.text.indexOf('id="article-card-list"');
+    const mostRead = res.text.indexOf('id="most-read-heading"');
+    assert.ok(weather > -1 && weather < stories, 'weather before the feed');
+    assert.ok(mostRead > stories, 'most read after the feed');
+  });
+
+  test('categories are chosen from the bar only (no duplicate dropdown), and the choice reaches infinite scroll', async () => {
+    const res = await page('/?category=sports');
+    assert.doesNotMatch(res.text, /id="feed-category"/, 'no category dropdown');
+    assert.match(res.text, /id="feed-sort"/, 'the sort control stays');
+    assert.match(res.text, /id="feed-bootstrap"[^>]*data-query-category="sports"/, 'feed.js loads more sports stories');
+  });
+
+  test('cards carry their category as a class, for the category color', async () => {
+    const res = await page('/');
+    assert.match(res.text, /<span class="card-category cat-science">science<\/span>/);
+  });
+});
