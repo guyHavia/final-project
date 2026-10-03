@@ -40,11 +40,11 @@ docker compose logs -f app
 
 ## Features
 
-- **Public API** (feed, article, comments, weather): newest-first article feed
-  with search, category filter and sort by date or popularity; guest comments
-  with no account (device-cookie rate limit); a weather endpoint for the footer
-  widget (brief C7/C8: server-side cached, 15-minute TTL). The public EJS pages
-  (P3-04/P3-05) are **not built yet**, so `/` has no feed page today.
+- **Public site** (`/`, `/article/:slug`): server-rendered feed with infinite
+  scroll, search, category filter and sort by date or popularity; full article
+  page with SEO-friendly server-rendered content; guest comments with no account
+  (device-cookie rate limit, 3/min); a weather widget cached server-side for
+  15 minutes.
 - **Newsroom** (`/login`, `/newsroom`, `/newsroom/review`, `/newsroom/analytics`):
   reporters write with autosave and submit for review; editors approve, return
   with a note, edit or delete, moderate comments, manage users, and see Impact
