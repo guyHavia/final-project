@@ -1,4 +1,5 @@
 import { test, describe, before, after, beforeEach } from 'node:test';
+import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import mongoose from 'mongoose';
@@ -142,6 +143,28 @@ describe('GET /newsroom/analytics', () => {
     const res = await request(app).get('/newsroom/analytics').set('Cookie', cookie);
     assert.equal(res.status, 302);
     assert.equal(res.headers.location, '/newsroom');
+  });
+});
+
+describe('links between the newsroom and the public site', () => {
+  test('the login page links back to the public site', async () => {
+    const res = await request(app).get('/login');
+    assert.match(res.text, /<a class="login-back" href="\/">← Back to The Daily Web<\/a>/);
+  });
+
+  for (const [who, path] of [['rep1', '/newsroom'], ['ed1', '/newsroom/review'], ['ed1', '/newsroom/analytics']]) {
+    test(`${path} has a "View site" link in the top bar and in the side menu`, async () => {
+      const res = await request(app).get(path).set('Cookie', await cookieFor(who));
+      assert.match(res.text, /<a class="nav-site-link" href="\/">/);
+      assert.match(res.text, /<a class="sidenav-site-link" href="\/">/);
+    });
+  }
+
+  test('logging out returns to the public home page, not the login page', () => {
+    const shell = readFileSync('public/js/shell.js', 'utf8');
+    const onLogout = shell.slice(shell.indexOf("'logout-button'"));
+    assert.match(onLogout, /window\.location\.href = '\/';/);
+    assert.doesNotMatch(onLogout.split('});')[0], /'\/login'/);
   });
 });
 
