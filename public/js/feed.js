@@ -124,8 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ${thumbHtml}
             <div class="card-content">
               <span class="card-category">${escapeHtml(item.category)}</span>
-              <h2><a href="/article/${escapeHtml(item.slug || item.id)}">${escapeHtml(item.title)}</a></h2>
-              ${item.abstract ? `<p class="card-abstract">${escapeHtml(item.abstract)}</p>` : ''}
+              <h2 dir="auto"><a href="/article/${escapeHtml(item.slug || item.id)}">${escapeHtml(item.title)}</a></h2>
+              ${item.abstract ? `<p class="card-abstract" dir="auto">${escapeHtml(item.abstract)}</p>` : ''}
               <div class="card-meta">
                 <span class="byline">${escapeHtml(item.author.displayName)}</span>
                 <span>&bull;</span>

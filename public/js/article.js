@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const bodyP = document.createElement('p');
     bodyP.className = 'comment-body-text';
+    bodyP.dir = 'auto';
     bodyP.textContent = comment.body; // XSS protection via textContent
 
     li.appendChild(headerDiv);

@@ -5,13 +5,14 @@ import { AppError } from '../lib/AppError.js';
  * scripts (`/js/*`), Chart.js (`/vendor/chart.js`) and stylesheets, with no
  * inline <script>/<style>/handlers, so a strict `'self'` policy suffices.
  * Chart.js sizes its canvas through the CSSOM (`el.style.x = ...`), which CSP
- * does not block. `img-src data:` allows inline canvas/placeholder images.
+ * does not block. `img-src data:` allows inline canvas/placeholder images;
+ * `https:` allows article photos, which are stored as links to other sites.
  */
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
   "style-src 'self'",
-  "img-src 'self' data:",
+  "img-src 'self' data: https:",
   "connect-src 'self'",
   "object-src 'none'",
   "base-uri 'self'",
