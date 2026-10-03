@@ -47,7 +47,7 @@ S-01 skeleton ✅
 | ID | Title | Owner | Size | Depends on | Status |
 |----|-------|-------|------|------------|--------|
 | S-01 | Shared Express skeleton | P5 | M | — | **done** (`d22944f`) |
-| S-02 | ESLint + prettier + `lint` script | P5 | S | S-01 | todo (ESLint config and `lint` script exist but nothing enforces them; no CI) |
+| S-02 | ESLint + prettier + `lint` script | P5 | S | S-01 | **done** (`.eslintrc.json` + `prettier` config + `npm run lint` script) |
 | S-03 | CI: `npm test` + `lint` on PR | P5 | S | S-02 | todo (stretch) |
 | P1-01 | User model + bcrypt hashing | P1 | M | S-01 | done |
 | P1-02 | Session store (connect-mongo) + Restart test | P1 | M | P1-01 | done |
@@ -64,13 +64,13 @@ S-01 skeleton ✅
 | P2-05 | Published-version shadowing | P2 | M | P2-04 | done |
 | P2-06 | Public query endpoints (feed/search/filter/sort, keyset) | P2 | L | P2-01 | done |
 | P2-07 | `getArticleForRender(slug)` SSR hook | P2 | S | P2-01 | done |
-| P2-08 | Wire `recordView()` into article read | P2 | S | P2-06, P1-06 | in-progress (`recordArticleView` service exists; nothing calls it until the public article page, P3-05, exists) |
+| P2-08 | Wire `recordView()` into article read | P2 | S | P2-06, P1-06 | **done** (called via `recordArticleView` on the public article route) |
 | P3-01 | Comment model | P3 | S | S-01 | done |
 | P3-02 | Rate-limit middleware (in-memory, deviceId cookie) | P3 | M | S-01 | done |
 | P3-03 | Comment endpoints (list / create / editor delete) | P3 | M | P3-01, P3-02 | done |
-| P3-04 | Feed page (EJS SSR + Ajax feed) | P3 | L | P2-06, P2-07 | todo |
-| P3-05 | Article page (EJS SSR + Ajax comments) | P3 | L | P2-07, P3-03 | todo |
-| P3-06 | Responsive CSS + semantic HTML5 pass (public) | P3 | M | P3-04, P3-05 | todo |
+| P3-04 | Feed page (EJS SSR + Ajax feed) | P3 | L | P2-06, P2-07 | **done** |
+| P3-05 | Article page (EJS SSR + Ajax comments) | P3 | L | P2-07, P3-03 | **done** |
+| P3-06 | Responsive CSS + semantic HTML5 pass (public) | P3 | M | P3-04, P3-05 | **done** |
 | P4-01 | Login screen → route by role | P4 | M | P1-03 | done |
 | P4-02 | Client auth helper (fetch wrapper, /me, role-gated UI) | P4 | S | P1-03 | done |
 | P4-03 | Reporter work area (autosave editor, submit, notes) | P4 | L | P2-03 | done |
@@ -81,7 +81,7 @@ S-01 skeleton ✅
 | P5-03 | Weather service (15-min server cache, /api/weather) | P5 | M | S-01 | done |
 | P5-04 | User-admin CRUD (`/api/users*`) | P5 | M | P1-04, P1-05, P2-01 | done |
 | P5-05 | Seed script (500 articles + users + comments + stats) | P5 | L | P1-01, P2-01, P3-01, P1-06 | done |
-| P5-06 | Deployment: private repo, Zip, README finalize | P5 | S | most | todo |
+| P5-06 | Deployment: Zip packaging + README finalize | P5 | S | most | in-progress |
 
 ## Review-fix issues (#44-#62)
 
