@@ -1,0 +1,15 @@
+<%
+  /*
+    Public site header (home feed, article page, 404). The site name links home;
+    "Newsroom" leads staff to the login, which sends a signed-in user straight to
+    their area. The newsroom screens use partials/header.ejs instead.
+  */
+%>
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="site-name" href="/">The Daily Web</a>
+    <nav class="site-nav" aria-label="Site">
+      <a href="/login">Newsroom</a>
+    </nav>
+  </div>
+</header>
