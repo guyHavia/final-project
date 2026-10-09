@@ -89,7 +89,7 @@ middleware/
   auth.js          requireAuth, requireRole, loadUser         (P1)
   loginLockout.js  failed-login lockout                       (P1)
   rateLimit.js     guest comment limit                        (P3)
-models/            user | article | comment | viewEvent
+models/            user | article | comment | viewEvent | viewSeen (view dedup, TTL)
 controllers/       one per resource
   article.controller.js   thin handlers for every /api/articles endpoint  (P2)
 routes/            one per resource, mounted under /api in routes/index.js;
