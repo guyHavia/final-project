@@ -31,14 +31,20 @@ docker compose exec app node seed/seed.js
 ### Managing the App
 
 ```bash
-# Stop the app and database
-docker compose down
+# Start the app and database (also after pulling new code)
+docker compose up -d --build
 
-# Restart the app (then re-seed if needed)
+# Stop the containers, then start them again later
+docker compose stop
+docker compose start
+
+# Restart the app and database (data and logins are kept)
 docker compose restart
 
-# Delete the database and start fresh (then re-seed). Needed once if your
-# database was created by an older MongoDB version, which MongoDB 9 can't open.
+# Delete the containers (the database is kept; start again with "up -d")
+docker compose down
+
+# Delete the containers and the database (run the seed again afterwards)
 docker compose down -v
 
 # View live server logs
