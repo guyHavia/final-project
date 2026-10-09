@@ -37,6 +37,10 @@ docker compose down
 # Restart the app (then re-seed if needed)
 docker compose restart
 
+# Delete the database and start fresh (then re-seed). Needed once if your
+# database was created by an older MongoDB version, which MongoDB 9 can't open.
+docker compose down -v
+
 # View live server logs
 docker compose logs -f app
 ```
