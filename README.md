@@ -153,19 +153,3 @@ Full contributor guide: `CONTRIBUTING.md`.
 | P5 | Platform skeleton, weather integration, seed data, user-admin CRUD |
 
 See `docs/TEAM-PLAN.md` and `docs/roles/` for detail.
-
-### Contributions
-
-Commits per person on `main` as of October 9, 2026, with each person's git
-identities counted together.
-
-| Person | Git identity | Role | Commits |
-|--------|--------------|------|---------|
-| Guy HaVia | Guy HaVia (also Guy Havia) | P1 | 75 |
-| Lital-Yos | Lital-Yos | P2 | 32 |
-| Anat | Anat (also Anat-Bar) | P3 | 15 |
-| tshnitz | tshnitz | P4 | 13 |
-| OriP | OriP (also Ori-Pe) | P5 | 61 |
-
-Commit counts measure activity, not effort. The code-review fix branches
-(`docs/tickets/README.md`) were committed under P1's identity.
