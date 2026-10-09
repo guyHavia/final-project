@@ -1,6 +1,6 @@
-# P1 — Identity & Access + Analytics
+# P1 - Identity & Access + Analytics
 
-**You own:** who a request is, what they may do, and — second slice — how article
+**You own:** who a request is, what they may do, and - second slice - how article
 views are counted and charted.
 
 ## Scope
@@ -9,10 +9,10 @@ views are counted and charted.
 |------|-------|
 | Models | `models/user.model.js`, `models/viewEvent.model.js` |
 | Endpoints | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `GET /api/articles/:id/stats` |
-| Middleware | `middleware/auth.js` — `requireAuth`, `requireRole(...roles)` (shared; you author) |
+| Middleware | `middleware/auth.js` - `requireAuth`, `requireRole(...roles)` (shared; you author) |
 | Config | `config/session.js` |
 | Services | `services/stats.service.js` |
-| Helper | `createUser({ username, password, role, displayName })` — exported for P5's seed |
+| Helper | `createUser({ username, password, role, displayName })` - exported for P5's seed |
 
 **Not yours:** user-admin CRUD (list/create/update/delete users) → P5, from your
 contract. The article publish/update history that supplies stats markers → P2
@@ -31,9 +31,9 @@ owns the data; you read it.
 
 ## Decisions that bind you
 
-- **D3** — no public signup; no `register` route. Editors create accounts (P5); the seed makes the first editor.
-- **D4** — session holds `{ id, role }`, snapshotted at login. RBAC authorizes on `req.session.user.role` (the login snapshot), never a live DB role — a role change takes effect on the user's next login. A `loadUser` middleware mirrors that snapshot onto `req.user.role` and re-checks `active` **live**, so deactivation/delete logs a user out immediately.
-- **D6** — you also own View-Stats + the Impact Analytics endpoint.
+- **D3** - no public signup; no `register` route. Editors create accounts (P5); the seed makes the first editor.
+- **D4** - session holds `{ id, role }`, snapshotted at login. RBAC authorizes on `req.session.user.role` (the login snapshot), never a live DB role - a role change takes effect on the user's next login. A `loadUser` middleware mirrors that snapshot onto `req.user.role` and re-checks `active` **live**, so deactivation/delete logs a user out immediately.
+- **D6** - you also own View-Stats + the Impact Analytics endpoint.
 
 Full text: `docs/TEAM-PLAN.md` §6.
 
@@ -42,14 +42,14 @@ Full text: `docs/TEAM-PLAN.md` §6.
 **You consume** (from the skeleton): `sendData`, `AppError`, `asyncHandler`,
 `logger`, `connectDb`, and `env` (`config/env.js` → `sessionSecret`, `mongoUri`).
 
-**You produce** — other roles depend on these exact names:
+**You produce** - other roles depend on these exact names:
 
-- `requireAuth`, `requireRole(...roles)` — Express middleware. `requireRole` authorizes on
+- `requireAuth`, `requireRole(...roles)` - Express middleware. `requireRole` authorizes on
   `req.session.user.role` (the login snapshot, per D4 + ADR-0001), not a live DB read. On failure:
   `next(AppError.unauthorized())` / `next(AppError.forbidden())`.
 - After login: `req.session.user = { id, role }`. `loadUser` attaches `req.user` (full doc) when a
   session exists, mirrors the session's snapshot role onto `req.user.role`, and re-checks `active`
-  live — a missing or deactivated user is logged out on the next request.
+  live - a missing or deactivated user is logged out on the next request.
 - `GET /api/auth/me` → `{ data: { id, username, role, displayName } }`.
 - `createUser(fields)` → saved `User` document; hashes the password itself.
 - `recordView(articleId)` → `Promise<void>`; P2/P3 call it from the article-read path.
@@ -59,7 +59,7 @@ Full text: `docs/TEAM-PLAN.md` §6.
 ## Tickets
 
 `docs/tickets/P1.md`. Order: **P1-01 → P1-02 → P1-03 → P1-04** (this unblocks P2
-and P4 — land it fast) → P1-05 → P1-06 → P1-07. P1-08 is stretch.
+and P4 - land it fast) → P1-05 → P1-06 → P1-07. P1-08 is stretch.
 
 ## Done when
 

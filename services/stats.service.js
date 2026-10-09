@@ -41,13 +41,13 @@ function truncateToBucket(date, bucket) {
 /** Most buckets one stats request may span (about 83 days hourly, 5.5 years daily). */
 export const MAX_BUCKETS = 2000;
 
-/** Number of buckets `[from, to]` spans — what `bucketBoundaries` would return, without building it. */
+/** Number of buckets `[from, to]` spans - what `bucketBoundaries` would return, without building it. */
 function bucketCount(from, to, bucket) {
   const span = truncateToBucket(to, bucket).getTime() - truncateToBucket(from, bucket).getTime();
   return Math.floor(span / BUCKET_STEP_MS[bucket]) + 1;
 }
 
-/** Every bucket boundary from `from` through `to`, inclusive, ascending — no gaps. */
+/** Every bucket boundary from `from` through `to`, inclusive, ascending - no gaps. */
 function bucketBoundaries(from, to, bucket) {
   const step = BUCKET_STEP_MS[bucket];
   const end = truncateToBucket(to, bucket).getTime();
@@ -60,7 +60,7 @@ function bucketBoundaries(from, to, bucket) {
 
 /**
  * The Impact Analytics series for one article: view counts bucketed by hour or
- * day across `[from, to]`, with every bucket present in the result — buckets
+ * day across `[from, to]`, with every bucket present in the result - buckets
  * the aggregation found no events for are zero-filled. Knows nothing about
  * Article/history/markers; the controller composes those on top.
  */

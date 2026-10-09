@@ -14,10 +14,10 @@ process restarts, which fails the requirement directly.
 
 Options considered:
 
-1. **`express-session` + `connect-mongo`** — session id in an httpOnly cookie,
+1. **`express-session` + `connect-mongo`** - session id in an httpOnly cookie,
    session data in a MongoDB collection.
-2. **JWT in an httpOnly cookie** — stateless, survives restart for free.
-3. `express-session` + `MemoryStore` — rejected, fails the Restart requirement.
+2. **JWT in an httpOnly cookie** - stateless, survives restart for free.
+3. `express-session` + `MemoryStore` - rejected, fails the Restart requirement.
 
 ## Decision
 
@@ -34,7 +34,7 @@ request when needed.
   that user's session documents to force logout.
 - A TTL index on the session collection expires stale sessions.
 - One extra dependency (`connect-mongo`) and one indexed Mongo read per
-  authenticated request — acceptable.
+  authenticated request - acceptable.
 - Role is snapshotted into the session at login. ~~A role change takes effect on
   the next login.~~ **Superseded (issue #62):** a role change, password change
   (own or editor reset) or deactivation now destroys the user's sessions, so a

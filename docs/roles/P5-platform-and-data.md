@@ -1,4 +1,4 @@
-# P5 — Platform & Data
+# P5 - Platform & Data
 
 **You own:** the ground everyone builds on, the outside world (weather), the demo
 dataset, and the admin corner of the User model.
@@ -7,7 +7,7 @@ dataset, and the admin corner of the User model.
 
 | Kind | Yours |
 |------|-------|
-| Skeleton | `server.js`, `app.js`, `config/`, `lib/`, `middleware/error.js`, `routes/index.js` — **built (S-01)**; you maintain it |
+| Skeleton | `server.js`, `app.js`, `config/`, `lib/`, `middleware/error.js`, `routes/index.js` - **built (S-01)**; you maintain it |
 | Tooling | ESLint + prettier config, `lint` script, (stretch) CI |
 | Services | `services/weather.service.js` |
 | Endpoints | `GET /api/weather`; user-admin CRUD `GET/POST/PATCH/DELETE /api/users`, `PATCH /api/users/me` |
@@ -20,7 +20,7 @@ dataset, and the admin corner of the User model.
 ## Constraints from the brief
 
 - MVC: clear Model / View / Controller separation; the skeleton already sets the shape.
-- Keep logs of errors and meaningful events — the `logger` exists; make sure controllers use it.
+- Keep logs of errors and meaningful events - the `logger` exists; make sure controllers use it.
 - Weather: Tel Aviv, from a real web service (e.g. OpenWeatherMap), **never hardcoded**.
   Every visitor sees data **no more than 15 minutes old**, and the site assumes thousands of parallel users → fetch once, cache server-side, serve the cache.
 - Errors and invalid input handled on **both** client and server; nothing leaves the DB in a corrupt state.
@@ -33,10 +33,10 @@ dataset, and the admin corner of the User model.
 
 ## Decisions that bind you
 
-- **D3** — user creation is editor-only; the seed creates the first editor.
-- **D6** — you do **not** own a core model. View-Stats went to P1.
-- **D7** — you maintain the skeleton; wire P1's `session.js` and P3's `rateLimit.js` at the seams in `app.js`.
-- **D8** — rate-limit storage is in-memory (P3 owns it); nothing for you to persist.
+- **D3** - user creation is editor-only; the seed creates the first editor.
+- **D6** - you do **not** own a core model. View-Stats went to P1.
+- **D7** - you maintain the skeleton; wire P1's `session.js` and P3's `rateLimit.js` at the seams in `app.js`.
+- **D8** - rate-limit storage is in-memory (P3 owns it); nothing for you to persist.
 
 ## Interfaces
 
@@ -48,7 +48,7 @@ all four models for the seed; `env` for `WEATHER_API_KEY`.
 - A stable skeleton API (already published: `sendData`, `AppError`, `asyncHandler`,
   `logger`, `createApp`, `connectDb`). Announce any change.
 - `GET /api/weather` → `{ data: { tempC, description, icon, observedAt } }`, served from cache.
-- `npm run seed` — idempotent (safe to re-run), prints a summary and the demo login credentials.
+- `npm run seed` - idempotent (safe to re-run), prints a summary and the demo login credentials.
 - User-admin CRUD per P1's contract in `docs/API-CONTRACT.md`.
 
 ## Tickets

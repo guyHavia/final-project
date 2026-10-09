@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 /**
  * Friendly fallback for local dev/test only. It's committed to a public repo,
- * so it is not a secret — production must never run with this value (#13).
+ * so it is not a secret - production must never run with this value (#13).
  */
 export const DEFAULT_SESSION_SECRET = 'dev-insecure-secret-change-me';
 

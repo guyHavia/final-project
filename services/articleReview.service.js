@@ -7,7 +7,7 @@ import { applyTransition, guardTransition, saveTransition, toActor } from './art
 import { presentFullArticle } from './articleQuery.service.js';
 
 /**
- * P2-04 — the editor's decisions: approve, return with a note, delete.
+ * P2-04 - the editor's decisions: approve, return with a note, delete.
  * The routes allow editors only (requireRole('editor')); which transitions are
  * legal is decided by the state machine, never here.
  */
@@ -21,7 +21,7 @@ async function loadArticle(id) {
 }
 
 /**
- * POST /api/articles/:id/approve — Pending → Published. The state machine copies
+ * POST /api/articles/:id/approve - Pending → Published. The state machine copies
  * the working copy into `published`, bumps the version, sets the slug and first
  * publish date the first time, and records a publish/update marker for the
  * Impact Analytics graph. A slug already taken gets a -2, -3, … suffix.
@@ -42,7 +42,7 @@ export async function approveArticle(id, user) {
   return presentFullArticle(article.toObject());
 }
 
-/** Reads `{ note }` — the only accepted field — as a trimmed, non-blank string of at most 1,000 characters. */
+/** Reads `{ note }` - the only accepted field - as a trimmed, non-blank string of at most 1,000 characters. */
 function readNote(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw AppError.badRequest('request body must be a JSON object');
@@ -60,7 +60,7 @@ function readNote(input) {
 }
 
 /**
- * POST /api/articles/:id/return — Pending → Returned for Corrections, with a
+ * POST /api/articles/:id/return - Pending → Returned for Corrections, with a
  * note the reporter sees on their article. A returned revision of a Published
  * article keeps its approved version on the public site.
  */
@@ -75,7 +75,7 @@ export async function returnArticle(id, user, input) {
 }
 
 /**
- * DELETE /api/articles/:id — removes the article, then its comments and view
+ * DELETE /api/articles/:id - removes the article, then its comments and view
  * records so nothing is left pointing at a missing article. The article goes
  * first: once it is gone, no new comment or view can be attached to it.
  */

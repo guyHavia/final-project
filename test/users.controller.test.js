@@ -94,7 +94,7 @@ describe('POST /api/users validation', () => {
 });
 
 describe('GET /api/users', () => {
-  test('q is a literal, case-insensitive substring — regex metacharacters do not 500', async () => {
+  test('q is a literal, case-insensitive substring - regex metacharacters do not 500', async () => {
     const { agent } = await setup();
     await seedUser('a.b');
     for (const q of ['(', '.*', '[', '\\']) {

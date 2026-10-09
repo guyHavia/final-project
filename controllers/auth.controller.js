@@ -22,7 +22,7 @@ export async function login(req, res) {
   const user = await User.findOne({ username: normalizedUsername }).select('+passwordHash');
   const usable = !!user && user.active !== false;
 
-  // One message for unknown user, wrong password, or deactivated account — no enumeration.
+  // One message for unknown user, wrong password, or deactivated account - no enumeration.
   // Unknown/inactive users still pay for a bcrypt compare so timing doesn't reveal them.
   const ok = usable ? await user.verifyPassword(password) : await verifyDummyPassword(password);
   if (!ok) {

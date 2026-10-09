@@ -1,6 +1,6 @@
-# P4 — Newsroom Frontend & Analytics UI
+# P4 - Newsroom Frontend & Analytics UI
 
-**You own:** every authenticated screen — login, the reporter's desk, the
+**You own:** every authenticated screen - login, the reporter's desk, the
 editor's desk, and the Impact Analytics graph.
 
 ## Scope
@@ -11,10 +11,10 @@ editor's desk, and the Impact Analytics graph.
 | Client | `public/js/login.js`, `public/js/newsroom-reporter.js`, `public/js/newsroom-editor.js`, `public/js/analytics.js`, `public/js/auth-client.js`, `public/css/newsroom.css` |
 | Library | Chart.js (via `<script>` tag or `public/vendor/`), for P4-05 only |
 
-**Not yours:** any model, any `/api` endpoint, any **authoritative role check** —
+**Not yours:** any model, any `/api` endpoint, any **authoritative role check** -
 those live on P1/P2's `/api` guards (`requireRole`), and your UI only hides what
 the user cannot do. **Yours:** a session-**presence** redirect on your own page
-routes — an unauthenticated request to `/newsroom`, `/newsroom/review`, or
+routes - an unauthenticated request to `/newsroom`, `/newsroom/review`, or
 `/newsroom/analytics` redirects to `/login` (no role decision, just "is there a
 session"). Deciding reporter-vs-editor access stays server-side on the API.
 
@@ -33,8 +33,8 @@ session"). Deciding reporter-vs-editor access stays server-side on the API.
 
 ## Decisions that bind you
 
-- **D4** — role is snapshotted at login; if the UI ever shows a stale role, a re-login fixes it. Don't build client-side role-refresh.
-- **D5** — pages at plain paths; data from `/api/...`.
+- **D4** - role is snapshotted at login; if the UI ever shows a stale role, a re-login fixes it. Don't build client-side role-refresh.
+- **D5** - pages at plain paths; data from `/api/...`.
 
 ## Interfaces
 
@@ -47,7 +47,7 @@ session"). Deciding reporter-vs-editor access stays server-side on the API.
 
 **You produce:**
 
-- `public/js/auth-client.js` — a `fetch` wrapper that carries the session cookie,
+- `public/js/auth-client.js` - a `fetch` wrapper that carries the session cookie,
   exposes `me()`, and redirects to `/login` on a 401. P3 may reuse it.
 - A "saved / saving / error" autosave indicator pattern the reporter editor uses.
 

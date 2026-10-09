@@ -105,7 +105,7 @@ describe('login lockout', () => {
     assert.equal(sixth.body.error.code, 'rate_limited');
   });
 
-  test('4 failed logins do not lock out — the correct password on the 5th attempt still logs in', async () => {
+  test('4 failed logins do not lock out - the correct password on the 5th attempt still logs in', async () => {
     for (let i = 0; i < 4; i += 1) {
       await failLogin();
     }
@@ -126,7 +126,7 @@ describe('login lockout', () => {
       .send({ username: 'lockout-target', password: 'goodpass' });
     assert.equal(success.status, 200);
 
-    // 4 more failures after a successful login should not lock out — the
+    // 4 more failures after a successful login should not lock out - the
     // count was reset on success, not carried over.
     for (let i = 0; i < 4; i += 1) {
       const res = await failLogin();

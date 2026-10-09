@@ -1,6 +1,6 @@
 // DOM-free state machine behind the "saving… / saved / error" indicator used
 // by the reporter's editing form. States: idle, dirty, saving, saved, error.
-// There is no Save button anywhere — this is the only thing deciding when a
+// There is no Save button anywhere - this is the only thing deciding when a
 // save actually happens.
 
 const DEBOUNCE_MS = 800;
@@ -77,7 +77,7 @@ export function createSaveIndicator({ save, onStateChange, debounceMs = DEBOUNCE
     },
 
     /**
-     * Forces a final best-effort save right now — submit, the tab being
+     * Forces a final best-effort save right now - submit, the tab being
      * hidden, or the page unloading. A no-op when there is nothing pending.
      */
     async flush() {

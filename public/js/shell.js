@@ -23,7 +23,7 @@ export function avatarColor(name = '') {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
-/** "just now", "5h", "2d 3h" — compact age of an ISO timestamp. */
+/** "just now", "5h", "2d 3h" - compact age of an ISO timestamp. */
 export function timeAgo(iso) {
   if (!iso) return '';
   const hours = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 3600e3));
@@ -32,7 +32,7 @@ export function timeAgo(iso) {
   return `${Math.floor(hours / 24)}d ${hours % 24}h`;
 }
 
-/** "just now" or "5h ago" — for sentences like "Edited … ". */
+/** "just now" or "5h ago" - for sentences like "Edited … ". */
 export function agoLabel(iso) {
   const age = timeAgo(iso);
   return age === 'just now' ? age : `${age} ago`;

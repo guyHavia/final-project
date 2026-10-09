@@ -203,7 +203,7 @@ describe('article text is safe, readable in any language, and images can load', 
 
   test('the browser tab title is not repeated on the home page', async () => {
     assert.match((await page('/')).text, /<title>The Daily Web<\/title>/);
-    assert.match((await page('/article/mars-rover-lands')).text, /<title>Mars Rover Lands — The Daily Web<\/title>/);
+    assert.match((await page('/article/mars-rover-lands')).text, /<title>Mars Rover Lands - The Daily Web<\/title>/);
   });
 });
 

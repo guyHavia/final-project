@@ -32,23 +32,23 @@ async function claimView(articleId, deviceId, now) {
 }
 
 /**
- * P2-08 — count one read of a public article. P3's `GET /article/:slug` page
- * calls this once per render (D10); nothing else does — not the JSON API, not
+ * P2-08 - count one read of a public article. P3's `GET /article/:slug` page
+ * calls this once per render (D10); nothing else does - not the JSON API, not
  * comment loads.
  *
  *   await recordArticleView(article.id, { viewer: req.user });
  *
  * Two writes per counted view:
- * 1. `viewCount + 1` on the article — the key for `sort=popularity`. An atomic
+ * 1. `viewCount + 1` on the article - the key for `sort=popularity`. An atomic
  *    `$inc`, so simultaneous readers are never lost. `timestamps: false` keeps
  *    `updatedAt` unchanged, so reading an article never reorders the newsroom
  *    lists ("most recently updated").
- * 2. One `ViewEvent` via P1's `recordView` — the time series behind the Impact
+ * 2. One `ViewEvent` via P1's `recordView` - the time series behind the Impact
  *    Analytics graph.
  *
- * Not counted: logged-in staff (`viewer` set — only reporters and editors can
+ * Not counted: logged-in staff (`viewer` set - only reporters and editors can
  * log in), anything that isn't a public article, and a repeat entry by the same
- * device (`deviceId`, the guest cookie) within VIEW_DEDUP_WINDOW_MS — so
+ * device (`deviceId`, the guest cookie) within VIEW_DEDUP_WINDOW_MS - so
  * refreshing does not inflate the count, while a reader who comes back later is
  * a new visit. Without a `deviceId` every call counts.
  *

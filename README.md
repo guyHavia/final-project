@@ -1,6 +1,6 @@
-# The Daily Web
+# 🚀 The Daily Web
 
-News system — course final project. Node.js + Express, MongoDB + Mongoose, EJS
+News system - course final project. Node.js + Express, MongoDB + Mongoose, EJS
 for server-rendered pages, Vanilla JS + Ajax on the client.
 
 ## Quick Start
@@ -17,7 +17,7 @@ docker compose up -d --build
 
 # 3. Seed the database with demo data (run this once)
 docker compose exec app node seed/seed.js
-#    → Login credentials will be printed at the end — save them!
+#    → Login credentials will be printed at the end - save them!
 
 # 4. Open the app in your browser
 #    → http://localhost:3000
@@ -70,7 +70,7 @@ npm run seed     # populate demo data and print login credentials (refuses NODE_
 
 ```
 server.js          entry point: connect DB, start listener
-app.js             createApp() — Express wiring, no listener/DB (testable)
+app.js             createApp() - Express wiring, no listener/DB (testable)
 config/
   env.js           all process config, read once
   db.js            Mongoose connection
@@ -79,7 +79,7 @@ lib/
   logger.js        structured JSON logger
   AppError.js      client-safe error with HTTP status + code
   asyncHandler.js  forwards async route errors to Express
-  respond.js       sendData(res, data) — the { data } success envelope
+  respond.js       sendData(res, data) - the { data } success envelope
   cursor.js        opaque keyset-pagination cursor (encode / decode)  (P2)
 middleware/
   error.js         notFound + terminal errorHandler
@@ -124,7 +124,7 @@ CONTEXT.md         domain glossary
   becomes a 500 with its message hidden.
 - Wrap async route handlers in `asyncHandler`.
 - JSON API under `/api/...`; server-rendered pages at plain paths.
-- `main` is protected — feature branch + PR + one review before merge.
+- `main` is protected - feature branch + PR + one review before merge.
 - Never commit secrets. `.env` is git-ignored.
 
 ## Team

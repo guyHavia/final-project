@@ -53,7 +53,7 @@ export async function getArticleStats(req, res) {
   sendData(res, { series, markers });
 }
 
-/** GET /api/articles/:id/views — one page of the article's view records. */
+/** GET /api/articles/:id/views - one page of the article's view records. */
 export async function listArticleViews(req, res) {
   const article = await Article.findById(req.params.id).select('_id');
   if (!article) throw AppError.notFound();
@@ -68,7 +68,7 @@ export async function getViewRecord(req, res) {
   sendData(res, await getView(req.params.id));
 }
 
-/** PATCH /api/views/:id — body `{ at }`, the only editable field. */
+/** PATCH /api/views/:id - body `{ at }`, the only editable field. */
 export async function updateViewRecord(req, res) {
   const body = req.body ?? {};
   if (typeof body !== 'object' || Array.isArray(body)) throw AppError.badRequest('request body must be a JSON object');

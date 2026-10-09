@@ -12,7 +12,7 @@ import { ViewSeen } from '../models/viewSeen.model.js';
 import { recordArticleView, VIEW_DEDUP_WINDOW_MS } from '../services/articleViews.service.js';
 
 /**
- * P2-08 — recordArticleView(articleId, { viewer }): the one call P3's article
+ * P2-08 - recordArticleView(articleId, { viewer }): the one call P3's article
  * page makes per render (D10). Records the view for Impact Analytics (P1's
  * ViewEvent) and bumps the article's viewCount for sort=popularity.
  */

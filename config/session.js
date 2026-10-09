@@ -22,7 +22,7 @@ class LazyMongoStore extends session.Store {
   #resolve() {
     if (!this.#store) {
       this.#store = MongoStore.create({
-        // Reuse the app's Mongoose connection — never open a second one (ADR 0001).
+        // Reuse the app's Mongoose connection - never open a second one (ADR 0001).
         client: mongoose.connection.getClient(),
         collectionName: 'sessions',
         ttl: SEVEN_DAYS_S,
@@ -88,7 +88,7 @@ export function sessionMiddleware() {
  * (its default `stringify: true`), so there is no field to query. Instead the
  * `session` string is pre-filtered server-side with a substring match on the
  * serialised `"id":"<userId>"` (JSON.stringify emits no whitespace), and only
- * those few candidates are parsed to confirm `session.user.id` — so no false
+ * those few candidates are parsed to confirm `session.user.id` - so no false
  * positive is ever deleted and the whole collection is no longer shipped to Node.
  *
  * Pass `exceptSid` (the caller's `req.sessionID`) to keep that one session

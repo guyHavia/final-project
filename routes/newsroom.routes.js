@@ -3,7 +3,7 @@ import { Router } from 'express';
 export const newsroomRouter = Router();
 
 /**
- * Session-presence redirect for pages — not authorization. It only checks that
+ * Session-presence redirect for pages - not authorization. It only checks that
  * *some* signed-in session exists; role checks stay on P1's/P2's /api guards
  * (requireAuth/requireRole). Never duplicate those here.
  */

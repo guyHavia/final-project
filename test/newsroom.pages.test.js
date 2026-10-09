@@ -10,7 +10,7 @@ import { createUser, User } from '../models/user.model.js';
 
 /**
  * Seam 1 from issue #6: page rendering and the session-presence redirect
- * gate. This is a session-presence check, not role authorization — the
+ * gate. This is a session-presence check, not role authorization - the
  * authoritative checks live on P1's/P2's /api guards. Real login (P1-03,
  * already merged) provides the session cookie, same pattern as
  * test/auth.routes.test.js.
@@ -62,7 +62,7 @@ describe('GET /login', () => {
   });
 });
 
-describe('newsroom page routes — no session', () => {
+describe('newsroom page routes - no session', () => {
   for (const path of ['/newsroom', '/newsroom/review', '/newsroom/analytics']) {
     test(`GET ${path} redirects to /login`, async () => {
       const res = await request(app).get(path);
@@ -186,7 +186,7 @@ describe('shared newsroom header', () => {
   });
 });
 
-// `/` is the public home feed (P3), open to everyone — it no longer redirects to
+// `/` is the public home feed (P3), open to everyone - it no longer redirects to
 // /login. Staff reach their area through the header's "Newsroom" link (/login).
 describe('GET /', () => {
   test('shows the public home feed to a signed-out visitor', async () => {
