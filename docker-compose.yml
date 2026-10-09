@@ -1,6 +1,6 @@
 services:
   mongo:
-    image: mongo:8
+    image: mongo:9
     restart: unless-stopped
     ports:
       # Loopback only: host tools (npm run dev, mongosh) can connect, the network cannot.
