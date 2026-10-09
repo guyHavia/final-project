@@ -44,7 +44,7 @@ export const User = mongoose.model('User', userSchema);
 
 /**
  * Create and persist a user, hashing the password with this module's rules so
- * callers (auth, the P5 seed) never touch bcrypt directly.
+ * callers (auth, the seed) never touch bcrypt directly.
  */
 export async function createUser({ username, password, role, displayName }) {
   const user = new User({ username, role, displayName });

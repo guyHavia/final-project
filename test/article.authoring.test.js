@@ -9,7 +9,7 @@ import { createUser } from '../models/user.model.js';
 import { Article } from '../models/article.model.js';
 
 /**
- * P2-03 - reporter authoring endpoints, through the real app:
+ * Reporter authoring endpoints, through the real app:
  * POST /api/articles, PATCH /api/articles/:id, PATCH /api/articles/:id/autosave,
  * POST /api/articles/:id/submit.
  */

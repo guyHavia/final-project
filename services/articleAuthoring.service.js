@@ -6,7 +6,7 @@ import { applyTransition, guardTransition, saveTransition, toActor } from './art
 import { presentFullArticle } from './articleQuery.service.js';
 
 /**
- * P2-03 - the reporter's writing flow: create, full edit, autosave, submit.
+ * The reporter's writing flow: create, full edit, autosave, submit.
  * Every permission and validation rule is enforced here, on the server.
  */
 

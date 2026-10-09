@@ -1,5 +1,5 @@
-// Thin fetch wrapper shared by every authenticated (P4) screen, and reused by
-// P3's public pages for the "who am I" call. Always sends the session cookie,
+// Thin fetch wrapper shared by every authenticated newsroom screen, and reused by
+// the public pages for the "who am I" call. Always sends the session cookie,
 // always unwraps the project's { data } / { error } envelope (see
 // docs/API-CONTRACT.md), so every screen has one place to trust instead of
 // re-parsing JSON and re-handling 401s at each call site.

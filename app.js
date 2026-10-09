@@ -30,13 +30,13 @@ export function createApp() {
 
   app.use(sessionMiddleware());
   app.use(asyncHandler(loadUser));
-  // --- seam: EJS view engine + server-rendered page routes (P3 / P4) ---
+  // --- seam: EJS view engine + server-rendered page routes ---
   app.set('view engine', 'ejs');
   app.set('views', path.join(import.meta.dirname, 'views'));
   app.use(express.static(path.join(import.meta.dirname, 'public')));
 
-  app.use(publicRoutes); // P3: / (home feed), /article/:slug
-  app.use(newsroomRouter); // P4: /login, /newsroom, /newsroom/review, /newsroom/analytics
+  app.use(publicRoutes); // / (home feed), /article/:slug
+  app.use(newsroomRouter); // /login, /newsroom, /newsroom/review, /newsroom/analytics
 
   app.use('/api', requireSameOrigin(), apiRouter);
 

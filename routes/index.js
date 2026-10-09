@@ -15,7 +15,7 @@ apiRouter.get('/health', (req, res) => {
 
 apiRouter.use('/auth', authRoutes);
 // Both routers share `/articles`: articleRoutes serves `/`, `/mine` and `/:id`;
-// statsRoutes serves `/:id/stats` (P1-07). `/:id` matches one path segment only,
+// statsRoutes serves `/:id/stats`. `/:id` matches one path segment only,
 // so the two never collide.
 apiRouter.use('/articles', articleRoutes);
 apiRouter.use('/articles', statsRoutes);

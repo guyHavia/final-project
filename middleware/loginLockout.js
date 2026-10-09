@@ -1,6 +1,6 @@
 /**
  * Login throttling, in memory (same style as middleware/rateLimit.js's guest
- * comment limiter, D8 - a restart resetting the counters is harmless).
+ * comment limiter - a restart resetting the counters is harmless).
  *
  * Two independent counters, both checked and bumped by one synchronous
  * `reserve()` call made BEFORE the async DB lookup + bcrypt, so a parallel

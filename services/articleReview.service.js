@@ -7,7 +7,7 @@ import { applyTransition, guardTransition, saveTransition, toActor } from './art
 import { presentFullArticle } from './articleQuery.service.js';
 
 /**
- * P2-04 - the editor's decisions: approve, return with a note, delete.
+ * The editor's decisions: approve, return with a note, delete.
  * The routes allow editors only (requireRole('editor')); which transitions are
  * legal is decided by the state machine, never here.
  */

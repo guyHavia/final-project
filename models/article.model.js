@@ -10,10 +10,10 @@ export const STATE = {
 export const STATES = Object.values(STATE);
 
 /**
- * The shared category list (issue #4, P2-01 schema section: "constrained to a
+ * The shared category list (issue #4: "constrained to a
  * shared category list constant"). Single source of truth for every place a
  * category value is read or written - the working copy, the `published`
- * snapshot, the category-filter index, and P5's seed all use this list.
+ * snapshot, the category-filter index, and the seed all use this list.
  */
 export const CATEGORIES = [
   'politics',

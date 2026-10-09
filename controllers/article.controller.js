@@ -39,7 +39,7 @@ export async function getArticle(req, res) {
   sendData(res, await getArticleForViewer(req.params.id, req.user));
 }
 
-// --- P2-03: reporter authoring. All behind `requireAuth`; the service enforces
+// --- Reporter authoring. All behind `requireAuth`; the service enforces
 // ownership and state rules, so the controllers only pass the session user on.
 
 /** POST /api/articles - 201 with the new article (In Preparation). */
@@ -62,7 +62,7 @@ export async function submitArticleHandler(req, res) {
   sendData(res, await submitArticle(req.params.id, req.user));
 }
 
-// --- P2-04: editor decisions. Behind `requireRole('editor')`.
+// --- Editor decisions. Behind `requireRole('editor')`.
 
 /** POST /api/articles/:id/approve - Pending → Published. */
 export async function approveArticleHandler(req, res) {

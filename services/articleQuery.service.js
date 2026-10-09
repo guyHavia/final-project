@@ -183,8 +183,8 @@ async function runPage({ filter, sort, field, dir }, limit, projection) {
 
 /**
  * Resolves each article's byline to `{ id, displayName }` with one query for the
- * whole page (D1). Never filters on `active`: a deactivated author keeps their
- * name (D2); an author whose document is gone gets a placeholder.
+ * whole page. Never filters on `active`: a deactivated author keeps their
+ * name; an author whose document is gone gets a placeholder.
  */
 async function attachAuthors(docs) {
   const authorIds = [...new Set(docs.map((d) => String(d.author)))];
@@ -262,7 +262,7 @@ export async function listMine(authorId, { limit, ...params }) {
  *   version, state, editor note, history - so the newsroom can show a diff.
  * - Everyone else: the published version only; 404 if it was never published,
  *   so a draft's existence is not revealed.
- * Does not count a view (D10 - the article page render does that).
+ * Does not count a view (the article page render does that).
  */
 export async function getArticleForViewer(id, viewer) {
   const doc = await Article.findById(id).lean();
@@ -278,15 +278,15 @@ export async function getArticleForViewer(id, viewer) {
 }
 
 /**
- * P2-07 - the server-render hook for P3's `GET /article/:slug` page. Returns one
+ * The server-render hook for the `GET /article/:slug` page. Returns one
  * public article with its FULL body (the SEO requirement: the text is in the
  * first HTML response), or `null` so the page can render its own 404.
  *
  * - Looks up by slug (case-insensitive: slugs are stored lowercase), then falls
- *   back to the article id when no slug matches (D5).
+ *   back to the article id when no slug matches.
  * - Only ever reads the published version - never the working copy - so a
  *   pending or returned revision can't leak into the page.
- * - Never throws for bad input and does not count a view (P2-08 / D10).
+ * - Never throws for bad input and does not count a view.
  *
  * Shape: the feed card (`toPublicCard`) plus `body`, so the feed and the article
  * page use the same field names.
@@ -308,7 +308,7 @@ export async function getArticleForRender(slugOrId) {
 
 /**
  * The full document for its author or an editor, byline resolved. Used by the
- * write endpoints (P2-03/P2-04) to answer with the same shape as GET /:id.
+ * write endpoints to answer with the same shape as GET /:id.
  */
 export async function presentFullArticle(doc) {
   const [withAuthor] = await attachAuthors([doc]);
