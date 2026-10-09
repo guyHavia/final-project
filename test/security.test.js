@@ -106,11 +106,8 @@ describe('requireSameOrigin', () => {
 describe('production SESSION_SECRET guard', () => {
   const prod = (s) => () => buildEnv({ NODE_ENV: 'production', SESSION_SECRET: s });
   test('rejects short secrets', () => assert.throws(prod('short-secret'), /SESSION_SECRET/));
-  test('rejects the committed .env.test value', () =>
-    assert.throws(
-      prod('0db5075dde9211db4b742e8f6972a854e812ad219c9fb59576be6c6a2b001c9a'),
-      /SESSION_SECRET/
-    ));
+  test('rejects the secret the test suite runs with', () =>
+    assert.throws(prod(process.env.SESSION_SECRET), /SESSION_SECRET/));
   test('accepts a long random secret', () =>
     assert.doesNotThrow(prod('x'.repeat(16) + 'Zq9'.repeat(6))));
   test('trustProxy from env', () => {

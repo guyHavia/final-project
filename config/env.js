@@ -6,9 +6,8 @@ import 'dotenv/config';
  */
 export const DEFAULT_SESSION_SECRET = 'dev-insecure-secret-change-me';
 
-/** Secret committed in .env.test; public, so never acceptable in production. */
-export const TEST_SESSION_SECRET =
-  '0db5075dde9211db4b742e8f6972a854e812ad219c9fb59576be6c6a2b001c9a';
+/** Secret committed in test.preload.js; public, so never acceptable in production. */
+export const TEST_SESSION_SECRET = 'test-only-dummy-secret-do-not-use-elsewhere';
 
 const MIN_PRODUCTION_SECRET_LENGTH = 32;
 

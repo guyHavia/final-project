@@ -60,7 +60,7 @@ docker compose logs -f app
 ```
 npm run dev      # dev server with auto-restart (no Docker needed if Mongo is up)
 npm start        # plain server start
-npm test         # node --test; loads .env.test; DB tests use mongodb-memory-server
+npm test         # node --test; test config in test.preload.js; DB tests use mongodb-memory-server
                  # (in-memory, no local Mongo needed; first run downloads a mongod binary)
 npm run lint     # eslint .
 npm run seed     # populate demo data and print login credentials (refuses NODE_ENV=production unless --force)
@@ -106,7 +106,7 @@ services/          business logic, called by the controllers
   weather.service.js           weather, cached server-side                     (P5)
 seed/seed.js       demo dataset                               (P5)
 test/              node --test files (*.test.js), support/mongo.js
-test.preload.js    loads .env.test before the suite
+test.preload.js    sets the test environment before the suite
 docs/
   TEAM-PLAN.md     work split, per-person steps, locked decisions
   API-CONTRACT.md  living REST contract (add as endpoints land)
