@@ -43,7 +43,7 @@ router.get('/article/:slug', async (req, res, next) => {
       return res.status(404).render('404');
     }
 
-    // D10 & P2-08: counted server-side, once per device per 30 minutes. Logged-in
+    // Counted server-side, once per device per 30 minutes. Logged-in
     // staff (req.user) are not counted; this also bumps viewCount for popularity.
     await recordArticleView(article.id, { viewer: req.user, deviceId: req.cookies?.deviceId });
 

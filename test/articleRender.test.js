@@ -9,8 +9,8 @@ import { ViewEvent } from '../models/viewEvent.model.js';
 import { getArticleForRender } from '../services/articleQuery.service.js';
 
 /**
- * getArticleForRender(slugOrId) - the server-render hook P3's `/article/:slug`
- * page calls (P2-07). Tested at the service seam: it has no HTTP surface.
+ * getArticleForRender(slugOrId) - the server-render hook the `/article/:slug`
+ * page calls. Tested at the service seam: it has no HTTP surface.
  */
 
 const FIRST = new Date('2025-02-01T09:00:00.000Z');
@@ -118,7 +118,7 @@ describe('getArticleForRender', () => {
     assert.equal(a?.id, String(articles.published._id));
   });
 
-  test('falls back to the article id when no slug matches (D5)', async () => {
+  test('falls back to the article id when no slug matches', async () => {
     const a = await getArticleForRender(String(articles.published._id));
     assert.equal(a?.slug, 'mars-rover-lands');
     assert.equal(a.body, publishedVersion(1).body);
@@ -135,7 +135,7 @@ describe('getArticleForRender', () => {
     }
   });
 
-  test('a deactivated author keeps their name (D2); a deleted author gets a placeholder', async () => {
+  test('a deactivated author keeps their name; a deleted author gets a placeholder', async () => {
     const departed = await getArticleForRender('old-story');
     assert.deepEqual(departed.author, { id: String(users.departed._id), displayName: 'Dana Departed' });
 
@@ -144,7 +144,7 @@ describe('getArticleForRender', () => {
     assert.equal(orphan.author.id, String(articles.byGhost.author));
   });
 
-  test('does not count a view (P2-08 / D10 - the page controller calls recordView)', async () => {
+  test('does not count a view (the page controller calls recordView)', async () => {
     await getArticleForRender('mars-rover-lands');
     await getArticleForRender('mars-rover-lands');
     assert.equal(await ViewEvent.countDocuments(), 0);

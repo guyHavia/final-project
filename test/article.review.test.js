@@ -11,7 +11,7 @@ import { Comment } from '../models/comment.model.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
 
 /**
- * P2-04 - editor workflow endpoints, through the real app:
+ * Editor workflow endpoints, through the real app:
  * POST /api/articles/:id/approve, POST /api/articles/:id/return, DELETE /api/articles/:id.
  */
 

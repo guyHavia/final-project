@@ -4,7 +4,7 @@ import { AppError } from '../lib/AppError.js';
 /**
  * Attach the current user to the request when a session exists.
  *
- * The session carries a `{ id, role }` snapshot taken at login (D4 + ADR 0001).
+ * The session carries a `{ id, role }` snapshot taken at login (ADR 0001).
  * We load the full document for `req.user`, but overlay the snapshot's role - a
  * role change ends the user's sessions (see users.controller), so the snapshot is never stale for long. `active` is the one
  * field checked live: a missing or deactivated user has their session destroyed
@@ -38,7 +38,7 @@ export function requireAuth(req, res, next) {
 
 /**
  * Require the session's snapshot role to be one of `roles`. Authorizes straight
- * off `req.session.user.role` (the login snapshot, D4 + ADR 0001) rather than
+ * off `req.session.user.role` (the login snapshot, ADR 0001) rather than
  * `req.user`, so it works without `loadUser` and never does a live DB read.
  * No session → 401; wrong role → 403. Errors go through `next(AppError)` so the
  * terminal handler builds the envelope.

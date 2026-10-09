@@ -4,7 +4,7 @@ export const newsroomRouter = Router();
 
 /**
  * Session-presence redirect for pages - not authorization. It only checks that
- * *some* signed-in session exists; role checks stay on P1's/P2's /api guards
+ * *some* signed-in session exists; role checks stay on the /api guards
  * (requireAuth/requireRole). Never duplicate those here.
  */
 function requireSession(req, res, next) {

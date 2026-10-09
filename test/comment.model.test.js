@@ -6,7 +6,7 @@ import { startMongo } from './support/mongo.js';
 import { Comment } from '../models/comment.model.js';
 import { Article } from '../models/article.model.js';
 
-describe('Comment Model (P3-01)', () => {
+describe('Comment Model', () => {
   let stopMongo;
   let sampleArticleId;
 

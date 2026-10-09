@@ -9,9 +9,9 @@ import { Article } from '../models/article.model.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
 
 /**
- * The public site through the REAL app (createApp): P3's server-rendered pages
+ * The public site through the REAL app (createApp): the server-rendered pages
  * are mounted, and the article page counts a reader's view once per render via
- * recordArticleView (P2-08, D10).
+ * recordArticleView.
  */
 
 let stopMongo;
@@ -127,7 +127,7 @@ describe('public pages are mounted', () => {
   });
 });
 
-describe('the article page counts views (P2-08)', () => {
+describe('the article page counts views', () => {
   test("a reader's visit adds 1 to viewCount and records one view for analytics", async () => {
     await page('/article/mars-rover-lands');
     assert.deepEqual(await viewsOf(live), { viewCount: 1, events: 1 });
@@ -149,7 +149,7 @@ describe('the article page counts views (P2-08)', () => {
     assert.equal(await ViewEvent.countDocuments(), 0);
   });
 
-  test('reading through the JSON API or loading comments counts nothing (D10)', async () => {
+  test('reading through the JSON API or loading comments counts nothing', async () => {
     await page(`/api/articles/${live._id}`);
     await page(`/api/articles/${live._id}/comments`);
     assert.deepEqual(await viewsOf(live), { viewCount: 0, events: 0 });

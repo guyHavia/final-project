@@ -7,7 +7,7 @@ import { AppError } from '../lib/AppError.js';
 import { Article } from '../models/article.model.js';
 import { startMongo } from './support/mongo.js';
 
-/** Minimal fixture shaped like an Article doc - see P2-02 spec. */
+/** Minimal fixture shaped like an Article doc. */
 function makeArticle(overrides = {}) {
   return {
     state: 'In Preparation',

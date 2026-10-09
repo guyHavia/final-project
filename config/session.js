@@ -84,7 +84,7 @@ export function sessionMiddleware() {
 /**
  * Delete every session document belonging to `userId` from the `sessions`
  * collection, so a deactivated or deleted user is logged out everywhere at
- * once (D2/D4). connect-mongo stores each session's data as a JSON string
+ * once. connect-mongo stores each session's data as a JSON string
  * (its default `stringify: true`), so there is no field to query. Instead the
  * `session` string is pre-filtered server-side with a substring match on the
  * serialised `"id":"<userId>"` (JSON.stringify emits no whitespace), and only

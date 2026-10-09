@@ -16,7 +16,7 @@ let publishedArticle;
 let draftArticle;
 let revisionArticle;
 
-// Minimal mock of P1's session/RBAC middleware for testing delete roles
+// Minimal mock of the session/RBAC middleware for testing delete roles
 function mockSession(req, res, next) {
     const role = req.headers['x-mock-role'];
     if (role) {

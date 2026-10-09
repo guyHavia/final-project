@@ -469,7 +469,7 @@ describe('GET /api/articles/:id', () => {
     assert.equal(unknown.status, 404);
   });
 
-  test('reading through the JSON API does not count a view (D10: only the page render does)', async () => {
+  test('reading through the JSON API does not count a view (only the page render does)', async () => {
     const doc = docs[12];
     await get(doc);
     await get(doc);
