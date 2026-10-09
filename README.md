@@ -1,4 +1,4 @@
-# 🚀 The Daily Web
+# The Daily Web 🚀
 
 News system - course final project. Node.js + Express, MongoDB + Mongoose, EJS
 for server-rendered pages, Vanilla JS + Ajax on the client.
