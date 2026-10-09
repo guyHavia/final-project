@@ -140,6 +140,8 @@ CONTEXT.md         domain glossary
 - `main` is protected - feature branch + PR + one review before merge.
 - Never commit secrets. `.env` is git-ignored.
 
+Full contributor guide: `CONTRIBUTING.md`.
+
 ## Team
 
 | Person | Domain |
