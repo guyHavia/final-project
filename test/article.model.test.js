@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import mongoose from 'mongoose';
 
 import { startMongo } from './support/mongo.js';
+import { validationError } from './support/validation.js';
 import { Article, CATEGORIES } from '../models/article.model.js';
 
 let stopMongo;
@@ -29,20 +30,20 @@ describe('Article model', () => {
     title: 'A headline',
   });
 
-  test('title is optional at the model level so autosave can store a half-written draft', () => {
+  test('title is optional at the model level so autosave can store a half-written draft', async () => {
     // A title is still required on create, full edit and submit - enforced by
     // articleAuthoring.service.js and the state machine, not the schema.
-    const err = new Article({ ...valid(), title: '' }).validateSync();
+    const err = await validationError(new Article({ ...valid(), title: '' }));
     assert.equal(err?.errors?.title, undefined);
   });
 
-  test('requires category', () => {
-    const err = new Article({ ...valid(), category: undefined }).validateSync();
+  test('requires category', async () => {
+    const err = await validationError(new Article({ ...valid(), category: undefined }));
     assert.ok(err.errors.category);
   });
 
-  test('requires author', () => {
-    const err = new Article({ ...valid(), author: undefined }).validateSync();
+  test('requires author', async () => {
+    const err = await validationError(new Article({ ...valid(), author: undefined }));
     assert.ok(err.errors.author);
   });
 
@@ -51,12 +52,12 @@ describe('Article model', () => {
     assert.equal(article.state, 'In Preparation');
   });
 
-  test('rejects a state outside the 4-value enum', () => {
-    const err = new Article({ ...valid(), state: 'Deleted' }).validateSync();
+  test('rejects a state outside the 4-value enum', async () => {
+    const err = await validationError(new Article({ ...valid(), state: 'Deleted' }));
     assert.ok(err.errors.state);
   });
 
-  test('accepts each of the 4 exact state strings', () => {
+  test('accepts each of the 4 exact state strings', async () => {
     const states = [
       'In Preparation',
       'Pending Editor Approval',
@@ -64,18 +65,18 @@ describe('Article model', () => {
       'Returned for Corrections',
     ];
     for (const state of states) {
-      assert.equal(new Article({ ...valid(), state }).validateSync(), undefined);
+      assert.equal(await validationError(new Article({ ...valid(), state })), undefined);
     }
   });
 
-  test('rejects a category outside the shared CATEGORIES list', () => {
-    const err = new Article({ ...valid(), category: 'underwater-basket-weaving' }).validateSync();
+  test('rejects a category outside the shared CATEGORIES list', async () => {
+    const err = await validationError(new Article({ ...valid(), category: 'underwater-basket-weaving' }));
     assert.ok(err.errors.category);
   });
 
-  test('accepts each of the agreed CATEGORIES values', () => {
+  test('accepts each of the agreed CATEGORIES values', async () => {
     for (const category of CATEGORIES) {
-      assert.equal(new Article({ ...valid(), category }).validateSync(), undefined);
+      assert.equal(await validationError(new Article({ ...valid(), category })), undefined);
     }
   });
 
@@ -137,10 +138,10 @@ describe('Article model', () => {
     assert.equal(fetched.history[1].by.toString(), by.toString());
   });
 
-  test('rejects a history kind outside publish|update', () => {
+  test('rejects a history kind outside publish|update', async () => {
     const article = new Article(valid());
     article.history.push({ at: new Date(), kind: 'delete', by: author() });
-    const err = article.validateSync();
+    const err = await validationError(article);
     assert.ok(err.errors['history.0.kind']);
   });
 

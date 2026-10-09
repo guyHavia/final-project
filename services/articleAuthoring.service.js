@@ -93,7 +93,7 @@ async function writeWorkingCopy(article, fields) {
   const updated = await Article.findOneAndUpdate(
     { _id: article._id, state: article.state },
     { $set: fields },
-    { new: true, runValidators: true },
+    { returnDocument: 'after', runValidators: true },
   );
   if (!updated) throw AppError.conflict('the article changed state, reload it and try again');
   return updated;

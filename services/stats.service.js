@@ -130,7 +130,7 @@ export async function getView(id) {
 
 /** Corrects the time of one view record. `at` must be a valid date, not in the future. */
 export async function updateViewTime(id, at) {
-  const doc = await ViewEvent.findByIdAndUpdate(id, { $set: { at } }, { new: true }).lean();
+  const doc = await ViewEvent.findByIdAndUpdate(id, { $set: { at } }, { returnDocument: 'after' }).lean();
   if (!doc) throw AppError.notFound('view not found');
   return toView(doc);
 }
