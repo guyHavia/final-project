@@ -1,7 +1,31 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { validateRange, markerKindLabel, tickLimit, buildTicks, formatBucketTime } from '../public/js/analytics-helpers.js';
+import {
+  validateRange,
+  markerKindLabel,
+  tickLimit,
+  buildTicks,
+  formatBucketTime,
+  defaultRange,
+} from '../public/js/analytics-helpers.js';
+
+describe('defaultRange', () => {
+  const now = new Date('2026-10-09T14:00:00Z');
+  const DAY = 24 * 60 * 60 * 1000;
+
+  test('hourly looks back one day, ending now', () => {
+    const { from, to } = defaultRange('hour', now);
+    assert.equal(to.getTime(), now.getTime());
+    assert.equal(now.getTime() - from.getTime(), DAY);
+  });
+
+  test('daily looks back one week, ending now', () => {
+    const { from, to } = defaultRange('day', now);
+    assert.equal(to.getTime(), now.getTime());
+    assert.equal(now.getTime() - from.getTime(), 7 * DAY);
+  });
+});
 
 describe('formatBucketTime', () => {
   const ms = new Date(2026, 9, 9, 14, 0).getTime();

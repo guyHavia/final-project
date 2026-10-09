@@ -9,6 +9,14 @@ export function validateRange(fromValue, toValue) {
   return null;
 }
 
+const DEFAULT_LOOKBACK_MS = { hour: 24 * 60 * 60 * 1000, day: 7 * 24 * 60 * 60 * 1000 };
+
+/** The From/To range a bucket starts with: hourly shows the last day, daily the last week. */
+export function defaultRange(bucket, now = new Date()) {
+  const lookback = DEFAULT_LOOKBACK_MS[bucket] ?? DEFAULT_LOOKBACK_MS.hour;
+  return { from: new Date(now.getTime() - lookback), to: new Date(now.getTime()) };
+}
+
 /** A bucket's start time (ms) as readable text: "Oct 9, 2026, 2:00 PM" for hours, "Oct 9, 2026" for days. */
 export function formatBucketTime(ms, bucket, locale) {
   const options = { year: 'numeric', month: 'short', day: 'numeric' };

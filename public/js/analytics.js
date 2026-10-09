@@ -1,6 +1,13 @@
 import { apiRequest, me } from './auth-client.js';
 import { initShell } from './shell.js';
-import { validateRange, markerKindLabel, tickLimit, buildTicks, formatBucketTime } from './analytics-helpers.js';
+import {
+  validateRange,
+  markerKindLabel,
+  tickLimit,
+  buildTicks,
+  formatBucketTime,
+  defaultRange,
+} from './analytics-helpers.js';
 
 const els = {
   search: document.getElementById('article-search'),
@@ -284,6 +291,12 @@ async function runSearch(query) {
   }
 }
 
+function applyDefaultRange() {
+  const { from, to } = defaultRange(els.bucket.value);
+  els.from.value = toDatetimeLocalValue(from);
+  els.to.value = toDatetimeLocalValue(to);
+}
+
 function wireControls() {
   els.search.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -293,7 +306,10 @@ function wireControls() {
     if (els.results.children.length === 0) runSearch('');
   });
 
-  els.bucket.addEventListener('change', loadStats);
+  els.bucket.addEventListener('change', () => {
+    applyDefaultRange();
+    loadStats();
+  });
   els.from.addEventListener('change', loadStats);
   els.to.addEventListener('change', loadStats);
 }
@@ -314,10 +330,7 @@ async function bootstrap() {
   }
   initShell(user);
 
-  const now = new Date();
-  els.to.value = toDatetimeLocalValue(now);
-  els.from.value = toDatetimeLocalValue(new Date(now.getTime() - 24 * 60 * 60 * 1000));
-
+  applyDefaultRange();
   wireControls();
   await preselectFromQueryString();
 }
