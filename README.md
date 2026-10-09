@@ -13,7 +13,7 @@ cp .env.example .env
 #    → Open .env and set:
 #      SESSION_SECRET  - a safe secret: 512 random bits (128 hex characters),
 #                        generate one with: openssl rand -hex 64
-#      WEATHER_API_KEY - your free OpenWeatherMap API key (openweathermap.org/api)
+#      WEATHER_API_KEY - OpenWeatherMap API key (openweathermap.org/api)
 
 # 2. Build and start the app + database in the background
 docker compose up -d --build
