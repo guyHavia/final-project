@@ -90,6 +90,12 @@ describe('public pages are mounted', () => {
     assert.ok(res.text.includes('The rover touched down at 04:12 UTC'), 'the body is server-rendered');
   });
 
+  test('the article page has a hidden alert with a retry button for when comments fail to load', async () => {
+    const res = await page('/article/mars-rover-lands');
+    assert.match(res.text, /id="comments-load-error"[^>]*role="alert"[^>]*hidden/);
+    assert.match(res.text, /id="retry-comments"/);
+  });
+
   test('the slug is case-insensitive', async () => {
     assert.equal((await page('/article/MARS-Rover-Lands')).status, 200);
   });

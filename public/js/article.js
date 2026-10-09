@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadMoreBtn = document.getElementById('load-more-comments');
   const emptyMsg = document.getElementById('comments-empty-msg');
   const countLive = document.getElementById('comment-count-live');
+  const loadError = document.getElementById('comments-load-error');
+  const retryBtn = document.getElementById('retry-comments');
 
   let nextCursor = null;
   let totalCount = 0;
@@ -34,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadComments(cursor = null) {
+    if (loadError) loadError.hidden = true;
     try {
       let url = `/api/articles/${articleId}/comments?limit=20`;
       if (cursor) url += `&cursor=${cursor}`;
@@ -56,8 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       updateLiveCount(commentsList.children.length);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      if (loadError) {
+        loadError.hidden = false;
+        if (retryBtn) retryBtn.onclick = () => loadComments(cursor);
+      }
     }
   }
 

@@ -151,9 +151,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       applyViewedState();
       failedAttempts = 0;
-    } catch (err) {
+    } catch {
       if (controller.signal.aborted) return;
-      console.error(err);
       failedAttempts += 1;
       if (failedAttempts <= MAX_AUTO_RETRIES) {
         setTimeout(() => fetchFeed(reset), 1000 * 2 ** failedAttempts);
