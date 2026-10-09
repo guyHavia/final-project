@@ -3,6 +3,18 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!commentsSection) return;
 
   const articleId = commentsSection.dataset.articleId;
+
+  // Shared with feed.js: the feed's viewed / not-viewed filter reads this list.
+  const SEEN_KEY = 'dw_seen_articles';
+  try {
+    const seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'));
+    if (!seen.has(articleId)) {
+      seen.add(articleId);
+      localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
+    }
+  } catch {
+    // Storage blocked or corrupt: the article just isn't marked as viewed.
+  }
   const commentsList = document.getElementById('comments-list');
   const commentForm = document.getElementById('comment-form');
   const commentFormError = document.getElementById('comment-form-error');

@@ -11,7 +11,7 @@
 
    <div class="home-main">
     <header class="feed-header">
-      <h1><%= activeCategory ? activeCategory : 'Latest Stories' %></h1>
+      <h1 id="feed-title"><%= activeCategory ? activeCategory : 'Latest Stories' %></h1>
       <p>The day's breaking news, analysis, and opinion.</p>
     </header>
 
@@ -31,7 +31,12 @@
           <option value="popularity" <%= query.sort === 'popularity' ? 'selected' : '' %>>Most read</option>
         </select>
 
-        <button type="button" id="toggle-viewed-btn" class="btn btn-ghost btn-sm" aria-pressed="false">Hide viewed</button>
+        <label class="sr" for="feed-viewed">Show</label>
+        <select class="field" id="feed-viewed">
+          <option value="all" selected>All stories</option>
+          <option value="unviewed">Not viewed</option>
+          <option value="viewed">Viewed</option>
+        </select>
       </div>
     </div>
 

@@ -297,7 +297,7 @@ textarea.field { resize: vertical; }
 .article-card:nth-child(2) h2, .article-card:nth-child(3) h2 { font-size: 1.35rem; }
 
 .article-card.viewed { opacity: 0.55; }
-.article-card.hidden-viewed { display: none !important; }
+.article-card.filtered-out { display: none !important; }
 
 .empty-state {
   grid-column: 1 / -1; padding: 3rem 1rem; text-align: center; color: var(--ink-2);
@@ -418,8 +418,8 @@ textarea.field { resize: vertical; }
   .article-card, .article-card:nth-child(2), .article-card:nth-child(3) { grid-column: 1 / -1; }
   .article-card:first-child:has(.card-thumb) { min-height: 340px; }
   .article-card:first-child:has(.card-thumb) .card-content { padding: 5rem 1.1rem 1.2rem; }
-  /* Phones: the sort dropdown and "Hide viewed" share one row under the search. */
-  .filter-group { width: 100%; display: grid; grid-template-columns: 1fr auto; }
+  /* Phones: the sort and viewed dropdowns share one row under the search. */
+  .filter-group { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
   .filter-group .field { width: 100%; }
   .site-nav a { padding: 0 0.8rem; }
   .masthead-date { font-size: 0.78rem; }

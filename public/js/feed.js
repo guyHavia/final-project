@@ -5,12 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
   let nextCursor = bootstrap.dataset.nextCursor || null;
   let currentQ = bootstrap.dataset.queryQ || '';
   let currentCategory = bootstrap.dataset.queryCategory || '';
-  let currentSort = bootstrap.Dataset?.querySort || 'date';
+  let currentSort = bootstrap.dataset.querySort || 'date';
 
   const searchInput = document.getElementById('feed-search');
-  const categorySelect = document.getElementById('feed-category');
   const sortSelect = document.getElementById('feed-sort');
-  const toggleViewedBtn = document.getElementById('toggle-viewed-btn');
+  const viewedSelect = document.getElementById('feed-viewed');
+  const feedTitle = document.getElementById('feed-title');
+  const categoryLinks = document.querySelectorAll('.category-bar .category-link');
   const cardList = document.getElementById('article-card-list');
   const sentinel = document.getElementById('scroll-sentinel');
   const retryBtn = document.getElementById('retry-btn');
@@ -39,22 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  let hideViewed = false;
+  // 'all' | 'viewed' | 'unviewed'
+  let viewedFilter = 'all';
 
   function applyViewedState() {
     const seen = getSeenSet();
     cardList.querySelectorAll('.article-card').forEach(card => {
-      const id = card.dataset.id;
-      if (seen.has(id)) {
-        card.classList.add('viewed');
-        if (hideViewed) {
-          card.classList.add('hidden-viewed');
-        } else {
-          card.classList.remove('hidden-viewed');
-        }
-      } else {
-        card.classList.remove('viewed', 'hidden-viewed');
-      }
+      const isSeen = seen.has(card.dataset.id);
+      card.classList.toggle('viewed', isSeen);
+      const hide = (viewedFilter === 'viewed' && !isSeen) || (viewedFilter === 'unviewed' && isSeen);
+      card.classList.toggle('filtered-out', hide);
     });
   }
 
@@ -64,11 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   applyViewedState();
 
-  if (toggleViewedBtn) {
-    toggleViewedBtn.addEventListener('click', () => {
-      hideViewed = !hideViewed;
-      toggleViewedBtn.setAttribute('aria-pressed', hideViewed ? 'true' : 'false');
-      toggleViewedBtn.textContent = hideViewed ? 'Show all' : 'Hide viewed';
+  if (viewedSelect) {
+    viewedSelect.addEventListener('change', (e) => {
+      viewedFilter = e.target.value;
       applyViewedState();
     });
   }
@@ -208,14 +201,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (categorySelect) {
-    categorySelect.addEventListener('change', (e) => {
-      currentCategory = e.target.value;
+  categoryLinks.forEach((link) => {
+    link.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      e.preventDefault();
+      currentCategory = new URL(link.href).searchParams.get('category') || '';
+      categoryLinks.forEach((other) => other.removeAttribute('aria-current'));
+      link.setAttribute('aria-current', 'page');
+      if (feedTitle) feedTitle.textContent = currentCategory || 'Latest Stories';
       nextCursor = null;
       updateURL();
       fetchFeed(true);
     });
-  }
+  });
 
   if (sortSelect) {
     sortSelect.addEventListener('change', (e) => {

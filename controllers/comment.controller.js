@@ -12,7 +12,7 @@ export async function list(req, res) {
  * unsaved comment on `req.comment` for `create`.
  */
 export async function prepare(req, res, next) {
-  const { authorName, body } = req.body;
+  const { authorName, body } = req.body ?? {};
   req.comment = await prepareComment(req.params.articleId, {
     authorName,
     body,
