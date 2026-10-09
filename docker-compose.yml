@@ -8,6 +8,8 @@ services:
       - "127.0.0.1:27017:27017"
     volumes:
       - mongo_data:/data/db
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -27,6 +29,15 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+    # The app writes nothing to disk, so its filesystem is read-only and it
+    # holds no Linux capabilities and cannot gain privileges.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   mongo_data:
