@@ -3,6 +3,7 @@ import { AppError } from '../lib/AppError.js';
 import { logger as defaultLogger } from '../lib/logger.js';
 
 const CACHE_TTL = 15 * 60 * 1000; // CONTEXT.md: no older than 15 minutes
+const FAILURE_BACKOFF_MS = 60 * 1000;
 const FETCH_TIMEOUT_MS = 5000;
 const ENDPOINT = 'https://api.openweathermap.org/data/2.5/weather';
 
@@ -10,7 +11,8 @@ const unavailable = () => AppError.serviceUnavailable('weather unavailable');
 
 /**
  * Weather source with a 15-minute cache. Upstream is contacted at most once per
- * TTL window, success or failure; data older than the TTL is never served.
+ * TTL window while it is healthy, and at most once a minute after a failure;
+ * data older than the TTL is never served.
  */
 export function createWeatherService({
   fetchFn = fetch,
@@ -37,6 +39,7 @@ export function createWeatherService({
       throw new Error('weather upstream returned an unexpected payload');
     }
     return {
+      city: typeof body.name === 'string' && body.name ? body.name : city.split(',')[0],
       tempC: temp,
       description: entry.description,
       icon: entry.icon,
@@ -73,7 +76,7 @@ export function createWeatherService({
     if (inflight) {
       return inflight;
     }
-    if (lastAttempt !== null && t - lastAttempt < CACHE_TTL) {
+    if (lastAttempt !== null && t - lastAttempt < FAILURE_BACKOFF_MS) {
       throw unavailable(); // recent failed attempt; do not hammer upstream
     }
 

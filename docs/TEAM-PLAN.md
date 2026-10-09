@@ -361,5 +361,6 @@ All settled 2026-09-06. Change one → announce it and update this section.
   `GET /article/:slug` page controller calls `recordView(articleId)` exactly once,
   server-side, when it renders the full article page. It is **not** called on Ajax
   comment loads and **not** from the JSON API (`GET /api/articles/:id`). One view
-  = one human page view; no write amplification. Applies to `docs/roles/P2`
+  = one human page view; no write amplification. Repeat renders by the same
+  device within 30 minutes are not counted (refreshes). Applies to `docs/roles/P2`
   (P2-08) + `docs/roles/P3`.

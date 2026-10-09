@@ -71,11 +71,12 @@ public feed and `GET /article/:slug` (P3-04/P3-05).
 
 - `GET /api/weather` — no auth. Footer weather widget for `WEATHER_CITY`
   (default `Tel Aviv,IL`), from OpenWeatherMap.
-  - `200 → { data: { tempC, description, icon, observedAt } }` — `observedAt`
-    is an ISO 8601 timestamp of the upstream fetch.
-  - Served from a server-side cache; the upstream is contacted at most once per
-    15 minutes (failed attempts count), and data older than 15 minutes is
-    never served.
+  - `200 → { data: { city, tempC, description, icon, observedAt } }` —
+    `city` is the upstream's name for the place; `observedAt` is an ISO 8601
+    timestamp of the upstream fetch.
+  - Served from a server-side cache; while healthy the upstream is contacted at
+    most once per 15 minutes, after a failure at most once a minute, and data
+    older than 15 minutes is never served.
   - `503 { error: { message: "weather unavailable", code: "service_unavailable" } }`
     when `WEATHER_API_KEY` is unset, or the upstream fails/times out (5 s) and
     there is no fresh cached value. No placeholder data is ever returned.
@@ -343,7 +344,7 @@ res.render('article', { article }); // article.body is the full text → SEO
   malformed, or never-published article. Never throws for bad input.
 - Does **not** count a view: the page controller calls `recordArticleView` (below).
 
-#### Counting a view (not an HTTP endpoint) — `recordArticleView(articleId, { viewer })`
+#### Counting a view (not an HTTP endpoint) — `recordArticleView(articleId, { viewer, deviceId })`
 
 P2-08. Call it **once per render of the article page**, and nowhere else (D10):
 not from the JSON API, not from the Ajax comment load.
@@ -352,7 +353,12 @@ not from the JSON API, not from the Ajax comment load.
   adds 1 to the article's `viewCount` (the `sort=popularity` key). The increment
   is atomic and does **not** change `updatedAt`.
 - Pass `viewer: req.user`. A logged-in reporter or editor is **not** counted, so
-  the numbers reflect readers. Every reader entry counts, refreshes included.
+  the numbers reflect readers.
+- Pass `deviceId: req.cookies.deviceId`. One device is counted at most once per
+  article per 30 minutes (`VIEW_DEDUP_WINDOW_MS`), so refreshing does not
+  inflate the count while a later return visit does count. The claim is one
+  atomic upsert on the `viewseens` collection (TTL-indexed, self-cleaning), so
+  simultaneous requests from one device count once.
 - Only public articles (with a published version) are counted.
 - Never throws — a failure is logged and the page still renders. Resolves to
   `true` when the view was counted, `false` otherwise.
@@ -436,5 +442,22 @@ not from the JSON API, not from the Ajax comment load.
   - **ViewEvent retention** — raw `ViewEvent` documents (one per view) are kept
     indefinitely: no TTL index and no pre-aggregation, because Impact Analytics
     needs full history. Growth is bounded by traffic and served by the
-    `{ article, at }` index. If volume becomes a problem, add rollup
+    `{ article, at, _id }` index. If volume becomes a problem, add rollup
     collections (hourly counts) rather than expiring events.
+
+### View records (ViewEvent CRUD)
+
+All editor-only (`requireRole('editor')`): `401` with no session, `403` for a
+reporter. A record is `{ id, article, at }` (`at` ISO 8601). **Create** is not
+an endpoint: the article page render records a view (`recordArticleView`).
+
+- `GET /api/articles/:id/views?from&to&cursor&limit` — the article's view
+  records, newest first. `from`/`to` optional ISO dates (unparsable → `400`);
+  `limit` 1–100, default 20; `cursor` is the previous page's `nextCursor`
+  (malformed → `400`). `200 → { data: { items: [view], nextCursor } }`.
+  `404` for an unknown article.
+- `GET /api/views/:id` — `200 → { data: view }`; `404` unknown; `400 invalid_id` malformed.
+- `PATCH /api/views/:id` — body `{ at }` (the only accepted field), a valid date
+  not in the future; anything else → `400`. `200 → { data: view }`.
+- `DELETE /api/views/:id` — removes the record and decrements the article's
+  `viewCount` (never below 0). `200 → { data: { ok: true } }`; `404` unknown.

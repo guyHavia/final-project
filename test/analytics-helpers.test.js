@@ -1,7 +1,26 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { validateRange, markerKindLabel, tickLimit, buildTicks } from '../public/js/analytics-helpers.js';
+import { validateRange, markerKindLabel, tickLimit, buildTicks, formatBucketTime } from '../public/js/analytics-helpers.js';
+
+describe('formatBucketTime', () => {
+  const ms = new Date(2026, 9, 9, 14, 0).getTime();
+
+  test('an hour bucket reads as a date and an hour, never as epoch milliseconds', () => {
+    const text = formatBucketTime(ms, 'hour', 'en-US');
+    assert.doesNotMatch(text, /\d{10,}|\d{1,3}(,\d{3}){3,}/);
+    assert.match(text, /Oct/);
+    assert.match(text, /9/);
+    assert.match(text, /2026/);
+    assert.match(text, /0?2:00\s?PM|14:00/);
+  });
+
+  test('a day bucket reads as a date without a time', () => {
+    const text = formatBucketTime(ms, 'day', 'en-US');
+    assert.match(text, /Oct/);
+    assert.doesNotMatch(text, /:/);
+  });
+});
 
 describe('validateRange', () => {
   test('accepts empty or ordered ranges', () => {

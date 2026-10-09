@@ -73,14 +73,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const MAX_AUTO_RETRIES = 3;
   let failedAttempts = 0;
 
+  // A new search / sort / category supersedes whatever is in flight; loading
+  // the next page while another request runs is simply skipped.
+  let inflight = null;
+
   async function fetchFeed(reset = false) {
-    if (isLoading) return;
+    if (isLoading && !reset) return;
+    if (inflight) inflight.abort();
+    const controller = new AbortController();
+    inflight = controller;
     isLoading = true;
     if (retryBtn) retryBtn.hidden = true;
 
     try {
+      // No `state` param: for a signed-in editor it would switch the endpoint to the newsroom view.
       const params = new URLSearchParams();
-      params.set('state', 'published');
       params.set('limit', '20');
       if (currentQ) params.set('q', currentQ);
       if (currentCategory) params.set('category', currentCategory);
@@ -89,7 +96,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const res = await fetch(`/api/articles?${params.toString()}`, {
         credentials: 'same-origin',
-        headers: { 'Accept': 'application/json' }
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
       });
 
       if (!res.ok) throw new Error('Failed to fetch articles');
@@ -144,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
       applyViewedState();
       failedAttempts = 0;
     } catch (err) {
+      if (controller.signal.aborted) return;
       console.error(err);
       failedAttempts += 1;
       if (failedAttempts <= MAX_AUTO_RETRIES) {
@@ -152,7 +161,10 @@ document.addEventListener('DOMContentLoaded', () => {
         retryBtn.hidden = false;
       }
     } finally {
-      isLoading = false;
+      if (inflight === controller) {
+        inflight = null;
+        isLoading = false;
+      }
     }
   }
 

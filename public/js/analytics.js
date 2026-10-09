@@ -1,6 +1,6 @@
 import { apiRequest, me } from './auth-client.js';
 import { initShell } from './shell.js';
-import { validateRange, markerKindLabel, tickLimit, buildTicks } from './analytics-helpers.js';
+import { validateRange, markerKindLabel, tickLimit, buildTicks, formatBucketTime } from './analytics-helpers.js';
 
 const els = {
   search: document.getElementById('article-search'),
@@ -168,7 +168,15 @@ function drawChart({ series, markers, bucket }) {
         },
         y: { beginAtZero: true, min: 0, ticks: { precision: 0, color: textColor }, grid: { color: gridColor }, title: { display: true, text: 'Views', color: textColor } },
       },
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => (items.length ? formatBucketTime(items[0].parsed.x, bucket) : ''),
+            label: (item) => `${item.parsed.y} view${item.parsed.y === 1 ? '' : 's'}`,
+          },
+        },
+      },
     },
     plugins: [markerPlugin],
   });

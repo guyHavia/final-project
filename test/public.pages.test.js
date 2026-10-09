@@ -127,7 +127,7 @@ describe('the article page counts views (P2-08)', () => {
     assert.deepEqual(await viewsOf(live), { viewCount: 1, events: 1 });
   });
 
-  test('every visit counts, including refreshes', async () => {
+  test('visits from different devices (no shared deviceId cookie) each count', async () => {
     for (let i = 0; i < 3; i += 1) await page('/article/mars-rover-lands');
     assert.deepEqual(await viewsOf(live), { viewCount: 3, events: 3 });
   });

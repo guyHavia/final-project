@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>The Daily Web</title>
+  <rect x="11.5" y="9.5" width="48" height="52" rx="6" fill="#e4ddcf" stroke="#1d1d1f" stroke-width="3"/>
+  <rect x="3.5" y="3.5" width="48" height="52" rx="6" fill="#fffdf8" stroke="#1d1d1f" stroke-width="3"/>
+  <path d="M9.5 3.5h36a6 6 0 0 1 6 6v7h-48v-7a6 6 0 0 1 6-6z" fill="#c8321f" stroke="#1d1d1f" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="none" stroke="#c8321f" stroke-width="2.6">
+    <circle cx="18" cy="30" r="8.5"/>
+    <ellipse cx="18" cy="30" rx="3.6" ry="8.5"/>
+    <path d="M9.5 30h17"/>
+  </g>
+  <g stroke="#1d1d1f" stroke-width="3" stroke-linecap="round">
+    <path d="M32 24.5h12M32 30h12M32 35.5h8M10 44h34M10 49.5h24"/>
+  </g>
+</svg>

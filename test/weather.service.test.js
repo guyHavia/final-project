@@ -12,6 +12,7 @@ const MIN = 60 * 1000;
 const KEY = 'sekrit-key-123';
 
 const okBody = (temp = 21.5) => ({
+  name: 'Tel Aviv',
   main: { temp },
   weather: [{ description: 'clear sky', icon: '01d' }],
 });
@@ -55,10 +56,11 @@ describe('weather service', () => {
     assert.equal(calls.length, 0);
   });
 
-  test('maps upstream payload to { tempC, description, icon, observedAt }', async () => {
+  test('maps upstream payload to { city, tempC, description, icon, observedAt }', async () => {
     const { service, clock } = setup();
     const data = await service.getWeather();
     assert.deepEqual(data, {
+      city: 'Tel Aviv',
       tempC: 21.5,
       description: 'clear sky',
       icon: '01d',
@@ -127,23 +129,22 @@ describe('weather service', () => {
     await assertUnavailable(service.getWeather());
   });
 
-  test('failure is backed off: upstream hit at most once per 15 min', async () => {
+  test('failure is backed off: upstream hit at most once per minute, whatever the traffic', async () => {
     const { service, clock, calls } = setup({ responses: [new Error('down')] });
     await assertUnavailable(service.getWeather());
-    clock.t += 1 * MIN;
-    await assertUnavailable(service.getWeather());
-    clock.t += 13 * MIN;
+    for (let i = 0; i < 50; i += 1) await assertUnavailable(service.getWeather());
+    clock.t += 1 * MIN - 1;
     await assertUnavailable(service.getWeather());
     assert.equal(calls.length, 1);
-    clock.t += 1 * MIN + 1;
+    clock.t += 1;
     await assertUnavailable(service.getWeather());
     assert.equal(calls.length, 2);
   });
 
-  test('recovers after backoff once upstream is healthy again', async () => {
+  test('recovers a minute after a failure once upstream is healthy again', async () => {
     const { service, clock } = setup({ responses: [new Error('down'), okResponse()] });
     await assertUnavailable(service.getWeather());
-    clock.t += 15 * MIN;
+    clock.t += 1 * MIN;
     assert.equal((await service.getWeather()).tempC, 21.5);
   });
 
@@ -154,7 +155,7 @@ describe('weather service', () => {
     await assertUnavailable(service.getWeather());
     clock.t += 5 * MIN;
     await assertUnavailable(service.getWeather());
-    assert.equal(calls.length, 2);
+    assert.equal(calls.length, 3);
   });
 
   test('never logs the API key', async () => {
