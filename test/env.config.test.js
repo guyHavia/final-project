@@ -1,5 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 
 import { buildEnv, DEFAULT_SESSION_SECRET } from '../config/env.js';
 
@@ -26,10 +27,9 @@ describe('buildEnv', () => {
   });
 
   test('builds a production env when a real SESSION_SECRET is set', () => {
-    const result = buildEnv(
-      source({ NODE_ENV: 'production', SESSION_SECRET: 'a-real-randomly-generated-secret' })
-    );
-    assert.equal(result.sessionSecret, 'a-real-randomly-generated-secret');
+    const secret = randomBytes(64).toString('hex');
+    const result = buildEnv(source({ NODE_ENV: 'production', SESSION_SECRET: secret }));
+    assert.equal(result.sessionSecret, secret);
     assert.equal(result.nodeEnv, 'production');
   });
 

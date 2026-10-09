@@ -11,7 +11,8 @@ export const TEST_SESSION_SECRET = 'test-only-dummy-secret-do-not-use-elsewhere'
 
 const KNOWN_PUBLIC_SECRETS = new Set([DEFAULT_SESSION_SECRET, TEST_SESSION_SECRET]);
 
-const MIN_PRODUCTION_SECRET_LENGTH = 32;
+/** 512 bits written as hex (4 bits per character), as produced by `openssl rand -hex 64`. */
+const MIN_PRODUCTION_SECRET_LENGTH = 128;
 
 function isWeakSecret(secret) {
   return secret.length < MIN_PRODUCTION_SECRET_LENGTH || KNOWN_PUBLIC_SECRETS.has(secret);

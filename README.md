@@ -11,8 +11,8 @@ The easiest way to run the project is using Docker Desktop. You don't need Node.
 # 1. Copy the config file
 cp .env.example .env
 #    → Open .env and set:
-#      SESSION_SECRET  - a safe secret: long and random (at least 32 characters),
-#                        e.g. generate one with: openssl rand -hex 32
+#      SESSION_SECRET  - a safe secret: 512 random bits (128 hex characters),
+#                        generate one with: openssl rand -hex 64
 #      WEATHER_API_KEY - your free OpenWeatherMap API key (openweathermap.org/api)
 
 # 2. Build and start the app + database in the background
