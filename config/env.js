@@ -9,14 +9,20 @@ export const DEFAULT_SESSION_SECRET = 'dev-insecure-secret-change-me';
 /** Secret committed in test.preload.js; public, so never acceptable in production. */
 export const TEST_SESSION_SECRET = 'test-only-dummy-secret-do-not-use-elsewhere';
 
+/** Committed in the old .env.test (still in git history); local .env copies may carry it. */
+const LEGACY_TEST_SESSION_SECRET =
+  '0db5075dde9211db4b742e8f6972a854e812ad219c9fb59576be6c6a2b001c9a';
+
+const KNOWN_PUBLIC_SECRETS = new Set([
+  DEFAULT_SESSION_SECRET,
+  TEST_SESSION_SECRET,
+  LEGACY_TEST_SESSION_SECRET,
+]);
+
 const MIN_PRODUCTION_SECRET_LENGTH = 32;
 
 function isWeakSecret(secret) {
-  return (
-    secret.length < MIN_PRODUCTION_SECRET_LENGTH ||
-    secret === DEFAULT_SESSION_SECRET ||
-    secret === TEST_SESSION_SECRET
-  );
+  return secret.length < MIN_PRODUCTION_SECRET_LENGTH || KNOWN_PUBLIC_SECRETS.has(secret);
 }
 
 /**
