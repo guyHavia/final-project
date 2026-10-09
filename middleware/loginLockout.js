@@ -1,6 +1,6 @@
 /**
  * Login throttling, in memory (same style as middleware/rateLimit.js's guest
- * comment limiter, D8 — a restart resetting the counters is harmless).
+ * comment limiter, D8 - a restart resetting the counters is harmless).
  *
  * Two independent counters, both checked and bumped by one synchronous
  * `reserve()` call made BEFORE the async DB lookup + bcrypt, so a parallel
@@ -11,7 +11,7 @@
  *    client can neither spray many usernames nor keep re-locking a victim.
  *
  * Stores are capped at `maxEntries` (oldest non-locked entry evicted) and
- * swept on a timer by `prune()` — never rescanned per request.
+ * swept on a timer by `prune()` - never rescanned per request.
  */
 
 export const WINDOW_MS = 15 * 60 * 1000;

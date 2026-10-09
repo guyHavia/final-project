@@ -1,7 +1,7 @@
 # Backlog
 
 One ticket = one branch = one PR. This table is the index. Per-owner detail:
-`P1.md` next to this file for P1; GitHub issues for the rest —
+`P1.md` next to this file for P1; GitHub issues for the rest -
 [#4](https://github.com/guyHavia/final-project/issues/4) (P2),
 [#5](https://github.com/guyHavia/final-project/issues/5) (P3),
 [#6](https://github.com/guyHavia/final-project/issues/6) (P4),
@@ -46,7 +46,7 @@ S-01 skeleton ✅
 
 | ID | Title | Owner | Size | Depends on | Status |
 |----|-------|-------|------|------------|--------|
-| S-01 | Shared Express skeleton | P5 | M | — | **done** (`d22944f`) |
+| S-01 | Shared Express skeleton | P5 | M | - | **done** (`d22944f`) |
 | S-02 | ESLint + prettier + `lint` script | P5 | S | S-01 | todo (ESLint config and `lint` script exist but nothing enforces them; no CI) |
 | S-03 | CI: `npm test` + `lint` on PR | P5 | S | S-02 | todo (stretch) |
 | P1-01 | User model + bcrypt hashing | P1 | M | S-01 | done |

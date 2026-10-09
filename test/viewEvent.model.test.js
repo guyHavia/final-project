@@ -22,9 +22,9 @@ afterEach(async () => {
 });
 
 describe('ViewEvent model', () => {
-  test('declares the { article: 1, at: 1 } compound index', () => {
+  test('declares the { article: 1, at: 1, _id: 1 } compound index', () => {
     const specs = ViewEvent.schema.indexes().map(([spec]) => JSON.stringify(spec));
-    assert.ok(specs.includes(JSON.stringify({ article: 1, at: 1 })));
+    assert.ok(specs.includes(JSON.stringify({ article: 1, at: 1, _id: 1 })));
   });
 
   test('CRUD sanity: create, find by article, delete', async () => {

@@ -9,7 +9,7 @@ import { ViewEvent } from '../models/viewEvent.model.js';
 import { getArticleForRender } from '../services/articleQuery.service.js';
 
 /**
- * getArticleForRender(slugOrId) — the server-render hook P3's `/article/:slug`
+ * getArticleForRender(slugOrId) - the server-render hook P3's `/article/:slug`
  * page calls (P2-07). Tested at the service seam: it has no HTTP surface.
  */
 
@@ -129,7 +129,7 @@ describe('getArticleForRender', () => {
     assert.equal(await getArticleForRender(String(articles.freshPending._id)), null);
   });
 
-  test('returns null — never throws — for unknown or malformed input', async () => {
+  test('returns null - never throws - for unknown or malformed input', async () => {
     for (const input of ['no-such-story', String(new mongoose.Types.ObjectId()), 'zzz', '', '   ', undefined, null, 42]) {
       assert.equal(await getArticleForRender(input), null, `expected null for ${JSON.stringify(input)}`);
     }
@@ -144,7 +144,7 @@ describe('getArticleForRender', () => {
     assert.equal(orphan.author.id, String(articles.byGhost.author));
   });
 
-  test('does not count a view (P2-08 / D10 — the page controller calls recordView)', async () => {
+  test('does not count a view (P2-08 / D10 - the page controller calls recordView)', async () => {
     await getArticleForRender('mars-rover-lands');
     await getArticleForRender('mars-rover-lands');
     assert.equal(await ViewEvent.countDocuments(), 0);

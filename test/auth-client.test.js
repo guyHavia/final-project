@@ -1,4 +1,4 @@
-/* eslint-env browser */
+/* global window */
 // This test stubs the browser globals (window, fetch) that auth-client.js
 // depends on, so it can be exercised directly under node:test.
 import { test, describe, beforeEach } from 'node:test';

@@ -9,7 +9,7 @@ import { Article } from '../models/article.model.js';
 import { getArticleForRender } from '../services/articleQuery.service.js';
 
 /**
- * P2-05 — published-version shadowing, end to end through the real endpoints.
+ * P2-05 - published-version shadowing, end to end through the real endpoints.
  * While a Published article is revised, submitted, or returned, every public
  * view keeps showing the last approved version; only an editor's approval
  * switches it. Each step checks all three public views at once: the JSON API,

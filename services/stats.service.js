@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
+import { clampLimit } from '../lib/query.js';
+import { encodeCursor, decodeCursor } from '../lib/cursor.js';
+import { Article } from '../models/article.model.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
 
 /**
@@ -38,13 +41,13 @@ function truncateToBucket(date, bucket) {
 /** Most buckets one stats request may span (about 83 days hourly, 5.5 years daily). */
 export const MAX_BUCKETS = 2000;
 
-/** Number of buckets `[from, to]` spans — what `bucketBoundaries` would return, without building it. */
+/** Number of buckets `[from, to]` spans - what `bucketBoundaries` would return, without building it. */
 function bucketCount(from, to, bucket) {
   const span = truncateToBucket(to, bucket).getTime() - truncateToBucket(from, bucket).getTime();
   return Math.floor(span / BUCKET_STEP_MS[bucket]) + 1;
 }
 
-/** Every bucket boundary from `from` through `to`, inclusive, ascending — no gaps. */
+/** Every bucket boundary from `from` through `to`, inclusive, ascending - no gaps. */
 function bucketBoundaries(from, to, bucket) {
   const step = BUCKET_STEP_MS[bucket];
   const end = truncateToBucket(to, bucket).getTime();
@@ -57,7 +60,7 @@ function bucketBoundaries(from, to, bucket) {
 
 /**
  * The Impact Analytics series for one article: view counts bucketed by hour or
- * day across `[from, to]`, with every bucket present in the result — buckets
+ * day across `[from, to]`, with every bucket present in the result - buckets
  * the aggregation found no events for are zero-filled. Knows nothing about
  * Article/history/markers; the controller composes those on top.
  */
@@ -87,6 +90,61 @@ export async function getSeries({ articleId, from, to, bucket }) {
     t: t.toISOString(),
     count: countByBucket.get(t.getTime()) ?? 0,
   }));
+}
+
+function toView(doc) {
+  return { id: String(doc._id), article: String(doc.article), at: doc.at.toISOString() };
+}
+
+/**
+ * One page of an article's view records, newest first, optionally limited to
+ * `[from, to]`. Keyset-paginated on `(at, _id)`.
+ */
+export async function listViews(articleId, { from, to, cursor, limit } = {}) {
+  const pageSize = clampLimit(limit);
+  const filter = { article: articleId };
+  if (from || to) filter.at = { ...(from && { $gte: from }), ...(to && { $lte: to }) };
+
+  if (cursor) {
+    const after = decodeCursor(cursor);
+    if (!after || !(after.v instanceof Date)) throw AppError.badRequest('invalid cursor');
+    const afterId = new mongoose.Types.ObjectId(after.id);
+    filter.$or = [{ at: { $lt: after.v } }, { at: after.v, _id: { $lt: afterId } }];
+  }
+
+  const docs = await ViewEvent.find(filter).sort({ at: -1, _id: -1 }).limit(pageSize + 1).lean();
+  let nextCursor = null;
+  if (docs.length > pageSize) {
+    docs.pop();
+    const last = docs[docs.length - 1];
+    nextCursor = encodeCursor({ v: last.at, id: last._id });
+  }
+  return { items: docs.map(toView), nextCursor };
+}
+
+export async function getView(id) {
+  const doc = await ViewEvent.findById(id).lean();
+  if (!doc) throw AppError.notFound('view not found');
+  return toView(doc);
+}
+
+/** Corrects the time of one view record. `at` must be a valid date, not in the future. */
+export async function updateViewTime(id, at) {
+  const doc = await ViewEvent.findByIdAndUpdate(id, { $set: { at } }, { returnDocument: 'after' }).lean();
+  if (!doc) throw AppError.notFound('view not found');
+  return toView(doc);
+}
+
+/** Deletes one view record and takes it off its article's `viewCount` (never below zero). */
+export async function deleteView(id) {
+  const doc = await ViewEvent.findByIdAndDelete(id).lean();
+  if (!doc) throw AppError.notFound('view not found');
+  await Article.updateOne(
+    { _id: doc.article, viewCount: { $gt: 0 } },
+    { $inc: { viewCount: -1 } },
+    { timestamps: false },
+  );
+  logger.info('stats.view_deleted', { viewId: String(doc._id), articleId: String(doc.article) });
 }
 
 /** Publish/update markers from an article's `history`, ascending by `at`. Does not mutate the input. */

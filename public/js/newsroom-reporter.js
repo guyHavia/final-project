@@ -70,7 +70,7 @@ function renderSaveStatus({ state, savedAt, errorMessage }) {
     const time = savedAt instanceof Date ? savedAt.toLocaleTimeString() : '';
     els.saveStatus.textContent = `Saved${time ? ' at ' + time : ''}`;
   } else if (state === 'error') {
-    els.saveStatus.textContent = `Not saved (${errorMessage}) — `;
+    els.saveStatus.textContent = `Not saved (${errorMessage}) - `;
     markInvalidField(errorMessage);
     const retry = document.createElement('button');
     retry.type = 'button';

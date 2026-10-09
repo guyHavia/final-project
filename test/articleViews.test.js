@@ -8,10 +8,11 @@ import { createApp } from '../app.js';
 import { createUser } from '../models/user.model.js';
 import { Article } from '../models/article.model.js';
 import { ViewEvent } from '../models/viewEvent.model.js';
-import { recordArticleView } from '../services/articleViews.service.js';
+import { ViewSeen } from '../models/viewSeen.model.js';
+import { recordArticleView, VIEW_DEDUP_WINDOW_MS } from '../services/articleViews.service.js';
 
 /**
- * P2-08 — recordArticleView(articleId, { viewer }): the one call P3's article
+ * P2-08 - recordArticleView(articleId, { viewer }): the one call P3's article
  * page makes per render (D10). Records the view for Impact Analytics (P1's
  * ViewEvent) and bumps the article's viewCount for sort=popularity.
  */
@@ -66,7 +67,7 @@ after(async () => {
 });
 
 beforeEach(async () => {
-  await Promise.all([Article.deleteMany({}), ViewEvent.deleteMany({})]);
+  await Promise.all([Article.deleteMany({}), ViewEvent.deleteMany({}), ViewSeen.deleteMany({})]);
 });
 
 describe('recordArticleView', () => {
@@ -85,11 +86,55 @@ describe('recordArticleView', () => {
     assert.equal((await stored(article._id)).updatedAt.getTime(), UPDATED.getTime());
   });
 
-  test('every entry counts, including the same reader refreshing', async () => {
+  test('the same device refreshing within the window is counted once', async () => {
     const article = await seedPublished();
-    for (let i = 0; i < 3; i += 1) await recordArticleView(String(article._id));
-    assert.equal(await eventsFor(article._id), 3);
-    assert.equal((await stored(article._id)).viewCount, 3);
+    const now = new Date('2026-10-09T10:00:00.000Z');
+    const results = [];
+    for (let i = 0; i < 3; i += 1) {
+      results.push(await recordArticleView(String(article._id), { deviceId: 'dev-a', now: new Date(now.getTime() + i * 60_000) }));
+    }
+    assert.deepEqual(results, [true, false, false]);
+    assert.equal(await eventsFor(article._id), 1);
+    assert.equal((await stored(article._id)).viewCount, 1);
+  });
+
+  test('different devices are each counted', async () => {
+    const article = await seedPublished();
+    assert.equal(await recordArticleView(article._id, { deviceId: 'dev-a' }), true);
+    assert.equal(await recordArticleView(article._id, { deviceId: 'dev-b' }), true);
+    assert.equal((await stored(article._id)).viewCount, 2);
+  });
+
+  test('the same device returning after the window is counted again', async () => {
+    const article = await seedPublished();
+    const first = new Date('2026-10-09T10:00:00.000Z');
+    const later = new Date(first.getTime() + VIEW_DEDUP_WINDOW_MS + 1000);
+    assert.equal(await recordArticleView(article._id, { deviceId: 'dev-a', now: first }), true);
+    assert.equal(await recordArticleView(article._id, { deviceId: 'dev-a', now: later }), true);
+    assert.equal((await stored(article._id)).viewCount, 2);
+  });
+
+  test('one device firing many simultaneous requests is counted once', async () => {
+    const article = await seedPublished();
+    await Promise.all(Array.from({ length: 20 }, () => recordArticleView(article._id, { deviceId: 'dev-a' })));
+    assert.equal((await stored(article._id)).viewCount, 1);
+    assert.equal(await eventsFor(article._id), 1);
+  });
+
+  test('a device viewing two articles is counted on each', async () => {
+    const one = await seedPublished();
+    const two = await seedPublished();
+    assert.equal(await recordArticleView(one._id, { deviceId: 'dev-a' }), true);
+    assert.equal(await recordArticleView(two._id, { deviceId: 'dev-a' }), true);
+  });
+
+  test('refreshing the article page with the same device cookie adds one view', async () => {
+    const article = await seedPublished();
+    const agent = request.agent(app);
+    await agent.get(`/article/${article.slug}`).expect(200);
+    await agent.get(`/article/${article.slug}`).expect(200);
+    await agent.get(`/article/${article.slug}`).expect(200);
+    assert.equal((await stored(article._id)).viewCount, 1);
   });
 
   test('50 simultaneous readers are all counted (the increment is atomic)', async () => {

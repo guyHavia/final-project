@@ -11,7 +11,7 @@ import { commentRateLimitStore } from '../routes/comment.routes.js';
 
 /**
  * The comment endpoints through the REAL app (createApp): proves the routes are
- * mounted, the Cookie header is parsed, and the rate limit works end to end —
+ * mounted, the Cookie header is parsed, and the rate limit works end to end -
  * the pieces the unit-level comment tests mock away.
  */
 

@@ -37,7 +37,7 @@ function buildApp() {
 }
 
 describe('destroySessionsForUser', () => {
-  test('removes only the target user\'s session — a different user\'s session survives', async () => {
+  test('removes only the target user\'s session - a different user\'s session survives', async () => {
     const app = buildApp();
 
     const loginU1 = await request(app).post('/_login').send({ id: 'u1' });

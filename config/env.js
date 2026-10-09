@@ -1,23 +1,19 @@
 import 'dotenv/config';
 
 /**
- * Friendly fallback for local dev/test only. It's committed to a public repo,
- * so it is not a secret — production must never run with this value (#13).
+ * Friendly fallback for local development only. It's committed to a public
+ * repo, so it is not a secret - production and tests never accept it (#13).
  */
 export const DEFAULT_SESSION_SECRET = 'dev-insecure-secret-change-me';
 
-/** Secret committed in .env.test; public, so never acceptable in production. */
-export const TEST_SESSION_SECRET =
-  '0db5075dde9211db4b742e8f6972a854e812ad219c9fb59576be6c6a2b001c9a';
+/** 512 bits written as hex (4 bits per character), as produced by `openssl rand -hex 64`. */
+const MIN_SECRET_LENGTH = 128;
 
-const MIN_PRODUCTION_SECRET_LENGTH = 32;
+/** Environments that must run with a real 512-bit secret instead of the default. */
+const STRICT_SECRET_ENVS = new Set(['production', 'test']);
 
 function isWeakSecret(secret) {
-  return (
-    secret.length < MIN_PRODUCTION_SECRET_LENGTH ||
-    secret === DEFAULT_SESSION_SECRET ||
-    secret === TEST_SESSION_SECRET
-  );
+  return secret.length < MIN_SECRET_LENGTH || secret === DEFAULT_SESSION_SECRET;
 }
 
 /**
@@ -42,10 +38,10 @@ export function buildEnv(source = process.env) {
   const nodeEnv = source.NODE_ENV ?? 'development';
   const sessionSecret = source.SESSION_SECRET ?? DEFAULT_SESSION_SECRET;
 
-  if (nodeEnv === 'production' && isWeakSecret(sessionSecret)) {
+  if (STRICT_SECRET_ENVS.has(nodeEnv) && isWeakSecret(sessionSecret)) {
     throw new Error(
-      `Refusing to start: SESSION_SECRET is unset, too short (< ${MIN_PRODUCTION_SECRET_LENGTH} chars) or a known committed value while NODE_ENV=production. ` +
-        'Set a real, random SESSION_SECRET before running in production (see .env.example).'
+      `Refusing to start: SESSION_SECRET is unset, shorter than ${MIN_SECRET_LENGTH} characters (512 bits) or the committed default while NODE_ENV=${nodeEnv}. ` +
+        'Generate one with `openssl rand -hex 64` (see .env.example).'
     );
   }
 

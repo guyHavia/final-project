@@ -30,7 +30,7 @@ describe('stats.service getSeries', () => {
     await ViewEvent.create([
       { article, at: new Date('2024-06-01T00:10:00.000Z') },
       { article, at: new Date('2024-06-01T00:40:00.000Z') },
-      // hour1 deliberately empty — the gap.
+      // hour1 deliberately empty - the gap.
       { article, at: new Date('2024-06-01T02:05:00.000Z') },
       { article, at: new Date('2024-06-01T02:20:00.000Z') },
       { article, at: new Date('2024-06-01T02:50:00.000Z') },

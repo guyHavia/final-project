@@ -29,7 +29,7 @@ const cookies = {};
 /**
  * One deterministic seeded article. `i % 5` picks the lifecycle kind so all four
  * states are present, including Published articles whose revision is pending
- * (`i % 10 === 4`) or was returned (`i % 10 === 9`) — those keep a published
+ * (`i % 10 === 4`) or was returned (`i % 10 === 9`) - those keep a published
  * snapshot that must stay public. Dates and view counts repeat on purpose so the
  * `_id` tie-break is exercised.
  */
@@ -91,7 +91,7 @@ function buildArticle(i) {
 
 const idOf = (doc) => String(doc._id);
 
-/** Descending by `key(doc)`, ties broken by `_id` descending — the API's keyset order. */
+/** Descending by `key(doc)`, ties broken by `_id` descending - the API's keyset order. */
 function orderDesc(list, key) {
   return [...list].sort((a, b) => {
     const ka = key(a);
@@ -160,7 +160,7 @@ const byDate = (list) => orderDesc(list, (d) => d.firstPublishedAt.getTime());
 const byViews = (list) => orderDesc(list, (d) => d.viewCount);
 const byUpdated = (list) => orderDesc(list, (d) => d.updatedAt.getTime());
 
-describe('GET /api/articles — public feed', () => {
+describe('GET /api/articles - public feed', () => {
   test('first page: 20 public cards with the documented shape and no draft-only fields', async () => {
     const res = await request(app).get('/api/articles');
     assert.equal(res.status, 200);
@@ -291,7 +291,7 @@ describe('GET /api/articles — public feed', () => {
     assert.equal((await request(app).get('/api/articles?category=cooking')).status, 400);
   });
 
-  test('state is ignored for guests and reporters — they still get only the public feed', async () => {
+  test('state is ignored for guests and reporters - they still get only the public feed', async () => {
     const guest = await collect('/api/articles', { state: 'In Preparation', limit: 50 });
     const reporter = await collect('/api/articles', { state: 'all', limit: 50 }, cookies.reporter1);
     const expected = byDate(publicDocs()).map(idOf);
@@ -313,7 +313,7 @@ describe('GET /api/articles — public feed', () => {
   });
 });
 
-describe('GET /api/articles?state=… — editor newsroom view', () => {
+describe('GET /api/articles?state=… - editor newsroom view', () => {
   test('state=all returns every article in every state, most recently updated first', async () => {
     const { items } = await collect('/api/articles', { state: 'all', limit: 50 }, cookies.editor1);
     assert.deepEqual(items.map((a) => a.id), byUpdated(docs).map(idOf));
@@ -360,7 +360,7 @@ describe('GET /api/articles?state=… — editor newsroom view', () => {
   });
 });
 
-describe('GET /api/articles/mine — reporter work area', () => {
+describe('GET /api/articles/mine - reporter work area', () => {
   test('requires a login', async () => {
     const res = await request(app).get('/api/articles/mine');
     assert.equal(res.status, 401);

@@ -10,6 +10,8 @@ async function mostRead() {
   return items;
 }
 
+router.get('/favicon.ico', (req, res) => res.redirect(301, '/favicon-32.png'));
+
 router.get('/', async (req, res, next) => {
   try {
     const { q, category, sort } = req.query;
@@ -41,9 +43,9 @@ router.get('/article/:slug', async (req, res, next) => {
       return res.status(404).render('404');
     }
 
-    // D10 & P2-08: count the view once, server-side, per full render. Logged-in
+    // D10 & P2-08: counted server-side, once per device per 30 minutes. Logged-in
     // staff (req.user) are not counted; this also bumps viewCount for popularity.
-    await recordArticleView(article.id, { viewer: req.user });
+    await recordArticleView(article.id, { viewer: req.user, deviceId: req.cookies?.deviceId });
 
     res.render('article', { article, mostRead: await mostRead(), activeCategory: article.category });
   } catch (err) {

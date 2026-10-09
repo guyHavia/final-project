@@ -4,8 +4,8 @@ import { STATE, CONTENT_FIELDS } from '../models/article.model.js';
 import { ROLE } from '../models/user.model.js';
 
 /**
- * The legal edges of the article lifecycle. Anything not listed here — including
- * every X -> X self-transition — is structurally illegal regardless of actor.
+ * The legal edges of the article lifecycle. Anything not listed here - including
+ * every X -> X self-transition - is structurally illegal regardless of actor.
  */
 const REACHABLE = {
   [STATE.IN_PREPARATION]: [STATE.PENDING],
@@ -19,7 +19,7 @@ const REACHABLE = {
  * marks and digits of any script (so a Hebrew title stays Hebrew), turns every
  * other run into one dash, strips edge dashes. URL-safe: only letters, digits and
  * `-` remain; browsers percent-encode non-ASCII in the path and Express decodes it.
- * Returns '' when nothing is left (all punctuation) — the caller falls back.
+ * Returns '' when nothing is left (all punctuation) - the caller falls back.
  */
 export function slugify(title) {
   return String(title ?? '')
@@ -57,7 +57,7 @@ function isOwnerOrEditor(article, actor) {
   return String(authorId) === String(actor.id);
 }
 
-/** Mirrors the structural + role/ownership guards only — no content/note check. */
+/** Mirrors the structural + role/ownership guards only - no content/note check. */
 function actorCanAttempt(article, to, actor) {
   const from = article.state;
   if (to === STATE.PENDING) {
@@ -102,8 +102,8 @@ export function applyTransition(article, to, actor, { note } = {}) {
     throw AppError.forbidden();
   }
 
-  // Every submit and every approve needs complete content — including a revision
-  // of a Published article, and an approve after an editor edited during review —
+  // Every submit and every approve needs complete content - including a revision
+  // of a Published article, and an approve after an editor edited during review -
   // so an empty article can never reach the public.
   if ((to === STATE.PENDING || to === STATE.PUBLISHED) && !hasRequiredContent(article)) {
     throw AppError.badRequest('title, body, and category are required');
@@ -196,8 +196,8 @@ function isSlugConflict(err) {
  * document), resolving a first-publish slug collision instead of letting the
  * `slug` unique-index violation crash the caller: on an `11000` conflict
  * specifically on `slug`, appends/bumps a numeric suffix (`base-2`, `base-3`,
- * …) and retries, up to `maxAttempts`. Any other error — including an `11000`
- * on a different field — is rethrown untouched, and `article.slug` is left as
+ * …) and retries, up to `maxAttempts`. Any other error - including an `11000`
+ * on a different field - is rethrown untouched, and `article.slug` is left as
  * it was when that error was raised.
  */
 export async function saveWithSlugRetry(article, { maxAttempts = 50 } = {}) {

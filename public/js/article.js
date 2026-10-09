@@ -3,6 +3,18 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!commentsSection) return;
 
   const articleId = commentsSection.dataset.articleId;
+
+  // Shared with feed.js: the feed's viewed / not-viewed filter reads this list.
+  const SEEN_KEY = 'dw_seen_articles';
+  try {
+    const seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'));
+    if (!seen.has(articleId)) {
+      seen.add(articleId);
+      localStorage.setItem(SEEN_KEY, JSON.stringify([...seen]));
+    }
+  } catch {
+    // Storage blocked or corrupt: the article just isn't marked as viewed.
+  }
   const commentsList = document.getElementById('comments-list');
   const commentForm = document.getElementById('comment-form');
   const commentFormError = document.getElementById('comment-form-error');
@@ -10,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const loadMoreBtn = document.getElementById('load-more-comments');
   const emptyMsg = document.getElementById('comments-empty-msg');
   const countLive = document.getElementById('comment-count-live');
+  const loadError = document.getElementById('comments-load-error');
+  const retryBtn = document.getElementById('retry-comments');
 
   let nextCursor = null;
   let totalCount = 0;
@@ -22,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadComments(cursor = null) {
+    if (loadError) loadError.hidden = true;
     try {
       let url = `/api/articles/${articleId}/comments?limit=20`;
       if (cursor) url += `&cursor=${cursor}`;
@@ -44,8 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
       updateLiveCount(commentsList.children.length);
-    } catch (err) {
-      console.error(err);
+    } catch {
+      if (loadError) {
+        loadError.hidden = false;
+        if (retryBtn) retryBtn.onclick = () => loadComments(cursor);
+      }
     }
   }
 

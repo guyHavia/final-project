@@ -18,11 +18,11 @@ export class ApiError extends Error {
 
 /**
  * `on401` controls what happens to an unauthenticated (401) response:
- * - 'redirect' (default) — send the browser to /login; resolves to undefined
+ * - 'redirect' (default) - send the browser to /login; resolves to undefined
  *   (the caller never observes this, since navigation is already underway).
- * - 'ignore' — resolve to undefined without redirecting. Used by `me()` so a
+ * - 'ignore' - resolve to undefined without redirecting. Used by `me()` so a
  *   page can tell a signed-out Guest apart from a real error, without a bounce.
- * - 'throw' — treat 401 like any other error status. Used by `login()`, where
+ * - 'throw' - treat 401 like any other error status. Used by `login()`, where
  *   a bad password must surface a message on the form, not a redirect loop
  *   back to the page the user is already on.
  */
@@ -38,7 +38,7 @@ export async function apiRequest(path, { method = 'GET', body, on401 = 'redirect
   try {
     payload = await res.json();
   } catch {
-    // No/invalid JSON body — fall through, treated as an empty envelope below.
+    // No/invalid JSON body - fall through, treated as an empty envelope below.
   }
 
   if (res.ok) {

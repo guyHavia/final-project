@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { sendData } from '../lib/respond.js';
 import { authRoutes } from './auth.routes.js';
-import { statsRoutes } from './stats.routes.js';
+import { statsRoutes, viewRoutes } from './stats.routes.js';
 import { articleRoutes } from './article.routes.js';
 import { weatherRoutes } from './weather.routes.js';
 import { userRoutes } from './users.routes.js';
@@ -19,6 +19,7 @@ apiRouter.use('/auth', authRoutes);
 // so the two never collide.
 apiRouter.use('/articles', articleRoutes);
 apiRouter.use('/articles', statsRoutes);
+apiRouter.use('/views', viewRoutes);
 apiRouter.use('/weather', weatherRoutes);
 apiRouter.use('/users', userRoutes);
 apiRouter.use('/', commentRoutes); // Maps /articles/:articleId/comments and /comments/:id

@@ -6,7 +6,7 @@ import { applyTransition, guardTransition, saveTransition, toActor } from './art
 import { presentFullArticle } from './articleQuery.service.js';
 
 /**
- * P2-03 — the reporter's writing flow: create, full edit, autosave, submit.
+ * P2-03 - the reporter's writing flow: create, full edit, autosave, submit.
  * Every permission and validation rule is enforced here, on the server.
  */
 
@@ -26,9 +26,9 @@ function isHttpUrl(value) {
 /**
  * Checks a request body against CONTENT_FIELDS (the only fields a client may
  * write; anything else is a 400) and returns the fields to write. Modes differ only in what may be blank:
- * - `create` — title and category required and non-blank.
- * - `edit`   — at least one field; a title, if sent, must be non-blank.
- * - `autosave` — anything goes blank (a half-written draft), but never invalid.
+ * - `create` - title and category required and non-blank.
+ * - `edit`   - at least one field; a title, if sent, must be non-blank.
+ * - `autosave` - anything goes blank (a half-written draft), but never invalid.
  * In every mode: unknown fields, non-strings, over-long text, an unknown
  * category and a non-http(s) image are refused. Text is stored as typed.
  */
@@ -86,20 +86,20 @@ async function loadEditable(id, user) {
 
 /**
  * Writes `fields` onto the working copy, but only if the article is still in the
- * state we checked — so a submit racing with an autosave can't slip an edit into
+ * state we checked - so a submit racing with an autosave can't slip an edit into
  * a Pending article. Never touches `published`, `state` or `author`.
  */
 async function writeWorkingCopy(article, fields) {
   const updated = await Article.findOneAndUpdate(
     { _id: article._id, state: article.state },
     { $set: fields },
-    { new: true, runValidators: true },
+    { returnDocument: 'after', runValidators: true },
   );
   if (!updated) throw AppError.conflict('the article changed state, reload it and try again');
   return updated;
 }
 
-/** POST /api/articles — a new article In Preparation, authored by the session user. */
+/** POST /api/articles - a new article In Preparation, authored by the session user. */
 export async function createArticle(user, input) {
   const fields = readContent(input, 'create');
   const article = await Article.create({ ...fields, author: user._id });
@@ -107,7 +107,7 @@ export async function createArticle(user, input) {
   return presentFullArticle(article.toObject());
 }
 
-/** PATCH /api/articles/:id — full, validated edit of the working copy. State never changes. */
+/** PATCH /api/articles/:id - full, validated edit of the working copy. State never changes. */
 export async function editArticle(id, user, input) {
   const article = await loadEditable(id, user);
   const fields = readContent(input, 'edit');
@@ -116,7 +116,7 @@ export async function editArticle(id, user, input) {
 }
 
 /**
- * PATCH /api/articles/:id/autosave — the fast, forgiving save behind "work is
+ * PATCH /api/articles/:id/autosave - the fast, forgiving save behind "work is
  * never lost". The draft lives on the server, so any device resumes it.
  */
 export async function autosaveArticle(id, user, input) {
@@ -126,7 +126,7 @@ export async function autosaveArticle(id, user, input) {
   return { id: String(updated._id), savedAt: updated.updatedAt };
 }
 
-/** POST /api/articles/:id/submit — to Pending Editor Approval, via the state machine's guards. */
+/** POST /api/articles/:id/submit - to Pending Editor Approval, via the state machine's guards. */
 export async function submitArticle(id, user) {
   const article = await Article.findById(id);
   if (!article) throw AppError.notFound('article not found');

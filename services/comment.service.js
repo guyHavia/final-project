@@ -6,7 +6,7 @@ import { encodeCursor, decodeCursor } from '../lib/cursor.js';
 import { escapeRegex, clampLimit } from '../lib/query.js';
 
 /**
- * Validates the article exists and is public — i.e. it has been published at
+ * Validates the article exists and is public - i.e. it has been published at
  * least once (`firstPublishedAt` is set). That includes a Published article whose
  * revision is Pending or Returned: its approved version is still on the site, so
  * its comments stay open.

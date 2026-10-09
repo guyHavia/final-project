@@ -12,7 +12,7 @@ export async function list(req, res) {
  * unsaved comment on `req.comment` for `create`.
  */
 export async function prepare(req, res, next) {
-  const { authorName, body } = req.body;
+  const { authorName, body } = req.body ?? {};
   req.comment = await prepareComment(req.params.articleId, {
     authorName,
     body,
@@ -25,7 +25,7 @@ export async function create(req, res) {
   sendData(res, await saveComment(req.comment), 201);
 }
 
-/** PATCH /api/comments/:id — editor-only moderation edit of `body`. */
+/** PATCH /api/comments/:id - editor-only moderation edit of `body`. */
 export async function update(req, res) {
   const { body } = req.body ?? {};
   sendData(res, await editComment(req.params.id, body));

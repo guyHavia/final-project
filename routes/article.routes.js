@@ -22,13 +22,13 @@ articleRoutes.get('/', asyncHandler(listArticles));
 articleRoutes.get('/mine', requireAuth, asyncHandler(listMyArticles));
 articleRoutes.get('/:id', asyncHandler(getArticle));
 
-// P2-03 — reporter authoring (reporters and editors).
+// P2-03 - reporter authoring (reporters and editors).
 articleRoutes.post('/', requireAuth, asyncHandler(createArticleHandler));
 articleRoutes.patch('/:id', requireAuth, asyncHandler(editArticleHandler));
 articleRoutes.patch('/:id/autosave', requireAuth, asyncHandler(autosaveArticleHandler));
 articleRoutes.post('/:id/submit', requireAuth, asyncHandler(submitArticleHandler));
 
-// P2-04 — editor decisions (editors only; loadUser has already dropped a
+// P2-04 - editor decisions (editors only; loadUser has already dropped a
 // deactivated user's session, so requireRole sees only active editors).
 articleRoutes.post('/:id/approve', requireRole('editor'), asyncHandler(approveArticleHandler));
 articleRoutes.post('/:id/return', requireRole('editor'), asyncHandler(returnArticleHandler));

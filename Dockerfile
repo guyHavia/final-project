@@ -1,5 +1,5 @@
 # ── Build stage ────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS deps
+FROM node:26-alpine AS deps
 WORKDIR /app
 
 # Copy manifests first so Docker caches the install layer separately
@@ -9,7 +9,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 # ── Runtime stage ───────────────────────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 WORKDIR /app
 
 # Non-root user for security

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-/** The four lifecycle states an article can be in. Single source of truth — no parallel booleans. */
+/** The four lifecycle states an article can be in. Single source of truth - no parallel booleans. */
 export const STATE = {
   IN_PREPARATION: 'In Preparation',
   PENDING: 'Pending Editor Approval',
@@ -12,7 +12,7 @@ export const STATES = Object.values(STATE);
 /**
  * The shared category list (issue #4, P2-01 schema section: "constrained to a
  * shared category list constant"). Single source of truth for every place a
- * category value is read or written — the working copy, the `published`
+ * category value is read or written - the working copy, the `published`
  * snapshot, the category-filter index, and P5's seed all use this list.
  */
 export const CATEGORIES = [
@@ -55,7 +55,7 @@ const publishedSchema = new mongoose.Schema(
 );
 
 /**
- * One workflow event. Read by the Impact Analytics endpoint for graph markers —
+ * One workflow event. Read by the Impact Analytics endpoint for graph markers -
  * shape is frozen as `{ at, kind, by }`, do not deviate.
  */
 const historyEntrySchema = new mongoose.Schema(
@@ -78,7 +78,7 @@ const articleSchema = new mongoose.Schema(
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     state: { type: String, enum: STATES, default: STATE.IN_PREPARATION, required: true },
 
-    // Working copy — what the reporter edits, what autosave writes.
+    // Working copy - what the reporter edits, what autosave writes.
     // `title` is not required here so autosave can store a half-written draft;
     // create, full edit and submit require it (articleAuthoring.service.js and
     // the state machine's content guard).
@@ -87,7 +87,7 @@ const articleSchema = new mongoose.Schema(
     body: String,
     image: String,
 
-    // Published version — the frozen public snapshot. Default null until first approval.
+    // Published version - the frozen public snapshot. Default null until first approval.
     published: { type: publishedSchema, default: null },
     // Set once on first approval, immutable thereafter (enforced at the service layer, not here).
     firstPublishedAt: Date,
@@ -105,7 +105,7 @@ const articleSchema = new mongoose.Schema(
 );
 
 /**
- * "Public" means the article has a published version — `firstPublishedAt` is set
+ * "Public" means the article has a published version - `firstPublishedAt` is set
  * on first approval together with `published` and never cleared. That includes a
  * Published article whose revision is Pending or Returned: its approved version
  * keeps serving readers. The public-feed indexes are partial on this filter, so

@@ -9,7 +9,7 @@ import { createUser } from '../models/user.model.js';
 import { Article } from '../models/article.model.js';
 
 /**
- * P2-03 — reporter authoring endpoints, through the real app:
+ * P2-03 - reporter authoring endpoints, through the real app:
  * POST /api/articles, PATCH /api/articles/:id, PATCH /api/articles/:id/autosave,
  * POST /api/articles/:id/submit.
  */
@@ -91,7 +91,7 @@ beforeEach(async () => {
 
 const VALID = { title: 'Mars rover lands', category: 'science', abstract: 'Short', body: 'Full text' };
 
-describe('POST /api/articles — create', () => {
+describe('POST /api/articles - create', () => {
   test('requires a login', async () => {
     const res = await create(null, VALID);
     assert.equal(res.status, 401);
@@ -154,7 +154,7 @@ describe('POST /api/articles — create', () => {
     assert.equal((await create('reporter1', { ...VALID, body: 'x'.repeat(50_001) })).status, 400);
   });
 
-  test('image must be an http(s) URL (or empty) — javascript: links are refused', async () => {
+  test('image must be an http(s) URL (or empty) - javascript: links are refused', async () => {
     assert.equal((await create('reporter1', { ...VALID, image: 'https://img.example/a.jpg' })).status, 201);
     assert.equal((await create('reporter1', { ...VALID, image: '' })).status, 201);
     for (const image of ['javascript:alert(1)', 'data:text/html,<script>', 'not a url', 'ftp://x/y.jpg']) {
@@ -170,7 +170,7 @@ describe('POST /api/articles — create', () => {
   });
 });
 
-describe('PATCH /api/articles/:id — full edit of the working copy', () => {
+describe('PATCH /api/articles/:id - full edit of the working copy', () => {
   test('the owner edits their draft and gets the full article back', async () => {
     const draft = await seed();
     const res = await edit('reporter1', draft._id, { title: 'Better title', body: 'Rewritten' });
@@ -238,7 +238,7 @@ describe('PATCH /api/articles/:id — full edit of the working copy', () => {
   });
 });
 
-describe('PATCH /api/articles/:id/autosave — work persistence', () => {
+describe('PATCH /api/articles/:id/autosave - work persistence', () => {
   test('saves a partial update and returns only { id, savedAt }', async () => {
     const draft = await seed();
     const res = await autosave('reporter1', draft._id, { body: 'Half a sente' });
@@ -308,7 +308,7 @@ describe('PATCH /api/articles/:id/autosave — work persistence', () => {
   });
 });
 
-describe('POST /api/articles/:id/submit — send for approval', () => {
+describe('POST /api/articles/:id/submit - send for approval', () => {
   test('the owner submits a complete draft: Pending Editor Approval with submittedAt', async () => {
     const draft = await seed();
     const res = await submit('reporter1', draft._id);

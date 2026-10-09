@@ -1,6 +1,6 @@
-# The Daily Web
+# The Daily Web 🚀
 
-News system — course final project. Node.js + Express, MongoDB + Mongoose, EJS
+News system - course final project. Node.js + Express, MongoDB + Mongoose, EJS
 for server-rendered pages, Vanilla JS + Ajax on the client.
 
 ## Quick Start
@@ -10,14 +10,17 @@ The easiest way to run the project is using Docker Desktop. You don't need Node.
 ```bash
 # 1. Copy the config file
 cp .env.example .env
-#    → Open .env and set SESSION_SECRET to any random string
+#    → Open .env and set:
+#      SESSION_SECRET  - a safe secret: 512 random bits (128 hex characters),
+#                        generate one with: openssl rand -hex 64
+#      WEATHER_API_KEY - your free OpenWeatherMap API key (openweathermap.org/api)
 
 # 2. Build and start the app + database in the background
 docker compose up -d --build
 
 # 3. Seed the database with demo data (run this once)
 docker compose exec app node seed/seed.js
-#    → Login credentials will be printed at the end — save them!
+#    → Login credentials will be printed at the end - save them!
 
 # 4. Open the app in your browser
 #    → http://localhost:3000
@@ -60,7 +63,7 @@ docker compose logs -f app
 ```
 npm run dev      # dev server with auto-restart (no Docker needed if Mongo is up)
 npm start        # plain server start
-npm test         # node --test; loads .env.test; DB tests use mongodb-memory-server
+npm test         # node --test; test config in test.preload.js; DB tests use mongodb-memory-server
                  # (in-memory, no local Mongo needed; first run downloads a mongod binary)
 npm run lint     # eslint .
 npm run seed     # populate demo data and print login credentials (refuses NODE_ENV=production unless --force)
@@ -70,7 +73,7 @@ npm run seed     # populate demo data and print login credentials (refuses NODE_
 
 ```
 server.js          entry point: connect DB, start listener
-app.js             createApp() — Express wiring, no listener/DB (testable)
+app.js             createApp() - Express wiring, no listener/DB (testable)
 config/
   env.js           all process config, read once
   db.js            Mongoose connection
@@ -79,14 +82,14 @@ lib/
   logger.js        structured JSON logger
   AppError.js      client-safe error with HTTP status + code
   asyncHandler.js  forwards async route errors to Express
-  respond.js       sendData(res, data) — the { data } success envelope
+  respond.js       sendData(res, data) - the { data } success envelope
   cursor.js        opaque keyset-pagination cursor (encode / decode)  (P2)
 middleware/
   error.js         notFound + terminal errorHandler
   auth.js          requireAuth, requireRole, loadUser         (P1)
   loginLockout.js  failed-login lockout                       (P1)
   rateLimit.js     guest comment limit                        (P3)
-models/            user | article | comment | viewEvent
+models/            user | article | comment | viewEvent | viewSeen (view dedup, TTL)
 controllers/       one per resource
   article.controller.js   thin handlers for every /api/articles endpoint  (P2)
 routes/            one per resource, mounted under /api in routes/index.js;
@@ -106,7 +109,7 @@ services/          business logic, called by the controllers
   weather.service.js           weather, cached server-side                     (P5)
 seed/seed.js       demo dataset                               (P5)
 test/              node --test files (*.test.js), support/mongo.js
-test.preload.js    loads .env.test before the suite
+test.preload.js    sets the test environment before the suite
 docs/
   TEAM-PLAN.md     work split, per-person steps, locked decisions
   API-CONTRACT.md  living REST contract (add as endpoints land)
@@ -124,7 +127,7 @@ CONTEXT.md         domain glossary
   becomes a 500 with its message hidden.
 - Wrap async route handlers in `asyncHandler`.
 - JSON API under `/api/...`; server-rendered pages at plain paths.
-- `main` is protected — feature branch + PR + one review before merge.
+- `main` is protected - feature branch + PR + one review before merge.
 - Never commit secrets. `.env` is git-ignored.
 
 ## Team

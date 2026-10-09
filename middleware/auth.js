@@ -5,7 +5,7 @@ import { AppError } from '../lib/AppError.js';
  * Attach the current user to the request when a session exists.
  *
  * The session carries a `{ id, role }` snapshot taken at login (D4 + ADR 0001).
- * We load the full document for `req.user`, but overlay the snapshot's role — a
+ * We load the full document for `req.user`, but overlay the snapshot's role - a
  * role change ends the user's sessions (see users.controller), so the snapshot is never stale for long. `active` is the one
  * field checked live: a missing or deactivated user has their session destroyed
  * and is treated as anonymous, so a delete/deactivate logs them out at once.

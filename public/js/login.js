@@ -21,7 +21,7 @@ function showError(message) {
 // The page route already redirects a signed-in request server-side, so a
 // normal load never needs a /api/auth/me probe (which would log a 401 in the
 // console for every signed-out visitor). Only a page restored from the
-// back/forward cache can be stale — e.g. after a login in another tab — so
+// back/forward cache can be stale - e.g. after a login in another tab - so
 // probe then.
 async function redirectIfAlreadySignedIn() {
   const user = await me();

@@ -40,7 +40,7 @@ describe('sessionMiddleware', () => {
     const cookie = login.headers['set-cookie'];
     assert.ok(cookie, 'login sets a session cookie');
 
-    // appB never saw the login; the session comes from Mongo — the Restart guarantee.
+    // appB never saw the login; the session comes from Mongo - the Restart guarantee.
     const who = await request(appB).get('/_who').set('Cookie', cookie);
     assert.deepEqual(who.body.data, { id: 'u1', role: 'editor' });
   });

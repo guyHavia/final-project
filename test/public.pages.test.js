@@ -90,6 +90,12 @@ describe('public pages are mounted', () => {
     assert.ok(res.text.includes('The rover touched down at 04:12 UTC'), 'the body is server-rendered');
   });
 
+  test('the article page has a hidden alert with a retry button for when comments fail to load', async () => {
+    const res = await page('/article/mars-rover-lands');
+    assert.match(res.text, /id="comments-load-error"[^>]*role="alert"[^>]*hidden/);
+    assert.match(res.text, /id="retry-comments"/);
+  });
+
   test('the slug is case-insensitive', async () => {
     assert.equal((await page('/article/MARS-Rover-Lands')).status, 200);
   });
@@ -127,7 +133,7 @@ describe('the article page counts views (P2-08)', () => {
     assert.deepEqual(await viewsOf(live), { viewCount: 1, events: 1 });
   });
 
-  test('every visit counts, including refreshes', async () => {
+  test('visits from different devices (no shared deviceId cookie) each count', async () => {
     for (let i = 0; i < 3; i += 1) await page('/article/mars-rover-lands');
     assert.deepEqual(await viewsOf(live), { viewCount: 3, events: 3 });
   });
@@ -203,7 +209,7 @@ describe('article text is safe, readable in any language, and images can load', 
 
   test('the browser tab title is not repeated on the home page', async () => {
     assert.match((await page('/')).text, /<title>The Daily Web<\/title>/);
-    assert.match((await page('/article/mars-rover-lands')).text, /<title>Mars Rover Lands — The Daily Web<\/title>/);
+    assert.match((await page('/article/mars-rover-lands')).text, /<title>Mars Rover Lands - The Daily Web<\/title>/);
   });
 });
 

@@ -2,6 +2,7 @@ import { test, describe, before, after, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { startMongo } from './support/mongo.js';
+import { validationError } from './support/validation.js';
 import { User, createUser } from '../models/user.model.js';
 
 let stopMongo;
@@ -27,29 +28,29 @@ describe('User model', () => {
     passwordHash: 'placeholder',
   };
 
-  test('requires username', () => {
-    const err = new User({ ...valid, username: undefined }).validateSync();
+  test('requires username', async () => {
+    const err = await validationError(new User({ ...valid, username: undefined }));
     assert.ok(err.errors.username);
   });
 
-  test('requires role', () => {
-    const err = new User({ ...valid, role: undefined }).validateSync();
+  test('requires role', async () => {
+    const err = await validationError(new User({ ...valid, role: undefined }));
     assert.ok(err.errors.role);
   });
 
-  test('requires displayName', () => {
-    const err = new User({ ...valid, displayName: undefined }).validateSync();
+  test('requires displayName', async () => {
+    const err = await validationError(new User({ ...valid, displayName: undefined }));
     assert.ok(err.errors.displayName);
   });
 
-  test('rejects a role outside the enum', () => {
-    const err = new User({ ...valid, role: 'admin' }).validateSync();
+  test('rejects a role outside the enum', async () => {
+    const err = await validationError(new User({ ...valid, role: 'admin' }));
     assert.ok(err.errors.role);
   });
 
-  test('accepts the reporter and editor roles', () => {
-    assert.equal(new User({ ...valid, role: 'reporter' }).validateSync(), undefined);
-    assert.equal(new User({ ...valid, role: 'editor' }).validateSync(), undefined);
+  test('accepts the reporter and editor roles', async () => {
+    assert.equal(await validationError(new User({ ...valid, role: 'reporter' })), undefined);
+    assert.equal(await validationError(new User({ ...valid, role: 'editor' })), undefined);
   });
 
   test('rejects a duplicate username case-insensitively', async () => {

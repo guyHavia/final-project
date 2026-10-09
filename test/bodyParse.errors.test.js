@@ -35,6 +35,13 @@ describe('request body parse errors', () => {
     assert.equal(res.body.error.code, 'payload_too_large');
   });
 
+  test('a comment post with no body returns 400, not 500', async () => {
+    const id = '507f1f77bcf86cd799439011';
+    const res = await request(app).post(`/api/articles/${id}/comments`);
+    assert.notEqual(res.status, 500);
+    assert.ok(res.status >= 400 && res.status < 500);
+  });
+
   test('a 50,000-char Hebrew body is under the limit (not 413)', async () => {
     const res = await request(app)
       .post('/api/auth/login')

@@ -11,7 +11,7 @@ adds the route. Frontend (P3, P4) codes against this.
 - **Error**: body is `{ "error": { "message": <string>, "code": <string> } }`.
   Throw `AppError.badRequest(msg)` / `.unauthorized()` / `.forbidden()` /
   `.notFound()` / `.conflict()` / `.tooManyRequests()` from `lib/AppError.js`, or
-  `next(err)` — the terminal `errorHandler` formats it. Never build the error
+  `next(err)` - the terminal `errorHandler` formats it. Never build the error
   body by hand.
 - Mongoose errors are mapped by `errorHandler`: `ValidationError` → 400
   `validation`, `CastError` → 400 `invalid_id`, duplicate key → 409 `duplicate`.
@@ -21,7 +21,7 @@ adds the route. Frontend (P3, P4) codes against this.
 
 ## How to protect a route
 
-_Owner: P1 — merged._
+_Owner: P1 - merged._
 
 `app.js` mounts `loadUser` after the session middleware, so `req.user` (full
 document) and `req.session.user` (`{ id, role }` snapshot) are set on every
@@ -33,7 +33,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 // any logged-in user
 router.get('/mine', requireAuth, asyncHandler(listMine));
 
-// editors only — authorizes on the login-snapshot role, not a live DB read
+// editors only - authorizes on the login-snapshot role, not a live DB read
 router.post('/', requireRole('editor'), asyncHandler(create));
 
 // either role
@@ -63,24 +63,25 @@ public feed and `GET /article/:slug` (P3-04/P3-05).
 
 ## Endpoints
 
-### GET /api/health  — _skeleton_
+### GET /api/health  - _skeleton_
 
 `200 → { "data": { "status": "ok" } }`. No auth. Liveness check.
 
-### Weather  — _P5_
+### Weather  - _P5_
 
-- `GET /api/weather` — no auth. Footer weather widget for `WEATHER_CITY`
+- `GET /api/weather` - no auth. Footer weather widget for `WEATHER_CITY`
   (default `Tel Aviv,IL`), from OpenWeatherMap.
-  - `200 → { data: { tempC, description, icon, observedAt } }` — `observedAt`
-    is an ISO 8601 timestamp of the upstream fetch.
-  - Served from a server-side cache; the upstream is contacted at most once per
-    15 minutes (failed attempts count), and data older than 15 minutes is
-    never served.
+  - `200 → { data: { city, tempC, description, icon, observedAt } }` -
+    `city` is the upstream's name for the place; `observedAt` is an ISO 8601
+    timestamp of the upstream fetch.
+  - Served from a server-side cache; while healthy the upstream is contacted at
+    most once per 15 minutes, after a failure at most once a minute, and data
+    older than 15 minutes is never served.
   - `503 { error: { message: "weather unavailable", code: "service_unavailable" } }`
     when `WEATHER_API_KEY` is unset, or the upstream fails/times out (5 s) and
     there is no fresh cached value. No placeholder data is ever returned.
 
-### Auth  — _P1_
+### Auth  - _P1_
 
 Session is a signed `connect.sid` cookie (httpOnly, `sameSite=lax`, 7-day TTL),
 backed by the `sessions` collection so a login survives a server restart. The
@@ -90,12 +91,12 @@ change, role change or deactivation destroys that user's sessions (all of them,
 except the caller's own current session when they edit their own account), so
 the change applies on their next request (they get `401` and must log in again).
 
-- `POST /api/auth/login` — body `{ username, password }`.
+- `POST /api/auth/login` - body `{ username, password }`.
   - `200 → { data: { id, username, role, displayName } }` and a `Set-Cookie`
     carrying a freshly regenerated session id.
   - `400` if `username` or `password` is missing.
   - `401 { error: { message: "invalid credentials", code: "unauthorized" } }`
-    for an unknown username, a wrong password, **or** a deactivated account —
+    for an unknown username, a wrong password, **or** a deactivated account -
     one message, no user enumeration.
   - `429 { error: { message: "too many failed login attempts, try again later", code: "rate_limited" } }`
     when either limit is hit within a 15-minute window: 5 attempts for that
@@ -108,19 +109,19 @@ the change applies on their next request (they get `401` and must log in again).
     deactivated users still cost a bcrypt comparison, so response time does not
     reveal whether a username exists. Failed logins are logged with the
     normalized username only. In-memory, size-capped maps pruned on a timer,
-    same style as the comment rate limiter (D8) — a restart resets them, which
+    same style as the comment rate limiter (D8) - a restart resets them, which
     is harmless.
-- `POST /api/auth/logout` — `200 → { data: { ok: true } }`. Destroys the session
+- `POST /api/auth/logout` - `200 → { data: { ok: true } }`. Destroys the session
   and clears the cookie. Safe to call without a session.
 - `GET /api/auth/me`
-  - `200 → { data: { id, username, role, displayName } }` when authenticated —
+  - `200 → { data: { id, username, role, displayName } }` when authenticated -
     a subset of the `userView` shape defined under "Users (admin)".
   - `401` otherwise. A user deactivated or deleted mid-session is treated as
     anonymous on their next request (the session is destroyed).
 
-### Users (admin)  — _contract by P1 (P1-05); implementation by P5 (P5-04)_
+### Users (admin)  - _contract by P1 (P1-05); implementation by P5 (P5-04)_
 
-There is **no public signup** (D3) — editors create every account here. Every
+There is **no public signup** (D3) - editors create every account here. Every
 `/api/users*` route below is **editor-only** (`requireRole('editor')`),
 including `GET /api/users/:id`. The single exception is `PATCH /api/users/me`,
 which is self-service for any authenticated user.
@@ -129,9 +130,9 @@ which is self-service for any authenticated user.
 `{ id, username, role, displayName, active, createdAt, updatedAt }`.
 
 P5 reuses `createUser({ username, password, role, displayName })` from
-`models/user.model.js` for hashing — do not call bcrypt directly.
+`models/user.model.js` for hashing - do not call bcrypt directly.
 
-- **`POST /api/users`** — editor-only. Body `{ username, password, role, displayName }`.
+- **`POST /api/users`** - editor-only. Body `{ username, password, role, displayName }`.
   - `201 → { data: userView }`.
   - Field rules: `username` and `displayName` are non-blank strings (trimmed;
     max 64 / 100 chars); `role` is `reporter|editor`; `password` is a string of
@@ -140,14 +141,14 @@ P5 reuses `createUser({ username, password, role, displayName })` from
   - `400` on a missing field, a wrong type, an out-of-range password, an
     unknown field, or `role` outside `reporter|editor`.
   - `409 { error: { code: "duplicate" } }` if `username` is taken (case-insensitive).
-- **`GET /api/users?q=&cursor=&limit=`** — editor-only. `q` is a case-insensitive
+- **`GET /api/users?q=&cursor=&limit=`** - editor-only. `q` is a case-insensitive
   **literal** substring match on `username` (regex characters are escaped; a
   repeated `q` → `400`); `limit` defaults to 20 (cap 100, non-numeric → 20);
   `cursor` is the last `id` from the previous page (keyset; malformed → `400`).
   - `200 → { data: { users: [userView], nextCursor: <id|null> } }`.
-- **`GET /api/users/:id`** — editor-only.
+- **`GET /api/users/:id`** - editor-only.
   - `200 → { data: userView }`; `404` if not found or the id is malformed.
-- **`PATCH /api/users/:id`** — editor-only. Any subset of
+- **`PATCH /api/users/:id`** - editor-only. Any subset of
   `{ role, displayName, active, password }`. `password` is re-hashed via the
   model's `setPassword`. Setting `active: false` is the soft-delete path (D2)
   and must also call `destroySessionsForUser(id)` (`config/session.js`, P1-08)
@@ -158,14 +159,14 @@ P5 reuses `createUser({ username, password, role, displayName })` from
     a `400`). An editor cannot deactivate or demote **themselves** (`403`), and
     nobody can deactivate or demote the **last active editor** (`409`).
   - `200 → { data: userView }`; `400` on an unknown field or a wrong type/value; `403` self-lockout; `404` if not found; `409` last active editor.
-- **`DELETE /api/users/:id`** — editor-only. An editor cannot delete
+- **`DELETE /api/users/:id`** - editor-only. An editor cannot delete
   themselves (`403`) or the last active editor (`409`). **Soft-delete** (D2): sets
   `active: false`; the byline and `author` refs stay valid. A hard delete is
   allowed **only** when the user has zero articles (coordinate with P2's
   article count). Either path must also call `destroySessionsForUser(id)`
   (`config/session.js`, P1-08).
   - `200 → { data: { ok: true, deleted: "soft" | "hard" } }`; `404` if not found.
-- **`PATCH /api/users/me`** — any authenticated user, own account only. Body is
+- **`PATCH /api/users/me`** - any authenticated user, own account only. Body is
   `{ displayName }` and/or `{ password, currentPassword }`; changing the
   password requires a correct `currentPassword`. `displayName` and `password`
   follow the create rules; any other field (`role`, `active`, `username`, …) is
@@ -175,7 +176,7 @@ P5 reuses `createUser({ username, password, role, displayName })` from
     `password`, or `currentPassword` missing when `password` is given; `401` if
     `currentPassword` is wrong.
 
-### Articles  — _P2_
+### Articles  - _P2_
 
 **Public** means *has a published version* (`firstPublishedAt` is set), not
 `state === 'Published'`. A Published article whose revision is Pending or
@@ -188,8 +189,8 @@ All lists use keyset pagination: pass the previous page's `nextCursor` as
 cursor, or a cursor from a different sort or `order`, → `400 bad_request`.
 
 **Keyset paging caveat.** A cursor is a position (`{ sort value, id, direction }`),
-not a snapshot. Sorts on a value that can change between requests — `popularity`
-(`viewCount`) and the newsroom/mine `updatedAt` — can therefore show an item twice
+not a snapshot. Sorts on a value that can change between requests - `popularity`
+(`viewCount`) and the newsroom/mine `updatedAt` - can therefore show an item twice
 or skip one when its value moves while a client is paging (e.g. an article gains
 views, or is edited, after page 1 was served). Within one page and for the stable
 `date` sort (`firstPublishedAt`, set once) results are exact. Clients that need
@@ -199,12 +200,12 @@ current order. This trade-off is accepted in exchange for no `skip`/offset scans
 Bylines are `author: { id, displayName }`. A deactivated author keeps their
 name (D2); an author whose document is gone shows `"Unknown author"`.
 
-- **`GET /api/articles?q=&category=&sort=&order=&cursor=&limit=`** — public feed, no auth.
-  - `q` — case-insensitive "contains" on the published title (regex characters are literal).
-  - `category` — one of the `CATEGORIES` list, matched on the published category. Unknown → `400`.
-  - `sort` — `date` (default, first publication, newest first) or `popularity`
+- **`GET /api/articles?q=&category=&sort=&order=&cursor=&limit=`** - public feed, no auth.
+  - `q` - case-insensitive "contains" on the published title (regex characters are literal).
+  - `category` - one of the `CATEGORIES` list, matched on the published category. Unknown → `400`.
+  - `sort` - `date` (default, first publication, newest first) or `popularity`
     (`viewCount`, highest first). Ties break on `id`. Unknown → `400`.
-  - `order` — `desc` (default: newest / most viewed first) or `asc` (oldest / least
+  - `order` - `desc` (default: newest / most viewed first) or `asc` (oldest / least
     viewed first, ties on `id` ascending). Works with every `sort`. Unknown → `400`.
     The cursor encodes the direction: keep sending the same `order` with a cursor;
     a cursor from the other direction → `400`. The newsroom and `mine` lists are
@@ -212,67 +213,67 @@ name (D2); an author whose document is gone shows `"Unknown author"`.
   - `200 → { data: { items: [Card], nextCursor } }`.
   - `Card` = `{ id, slug, title, abstract, image, category, author, publishedAt, updatedAt, viewCount }`.
     `publishedAt` is the first publication date; `updatedAt` is when the current
-    published version was approved. No `body` — open the article for that.
+    published version was approved. No `body` - open the article for that.
   - `state` is ignored for guests and reporters.
 
-- **`GET /api/articles?state=…&q=&category=&cursor=&limit=`** — editor newsroom view.
+- **`GET /api/articles?state=…&q=&category=&cursor=&limit=`** - editor newsroom view.
   Only when the caller is an **editor** and `state` is sent; without `state` an
   editor gets the public feed, so the home page never shows drafts.
-  - `state` — one of the four states, or `all`. Unknown → `400`.
+  - `state` - one of the four states, or `all`. Unknown → `400`.
   - `q` / `category` match the **working copy**. Always ordered by `updatedAt` desc; `sort` is ignored.
   - `200 → { data: { items: [WorkItem], nextCursor } }`.
   - `WorkItem` = `{ id, slug, state, title, abstract, image, category, author,
     editorNote, hasPublishedVersion, hasUnsubmittedChanges, publishedAt, submittedAt,
     updatedAt, viewCount }`
-    — working-copy fields. `editorNote` is set only when `state` is
+    - working-copy fields. `editorNote` is set only when `state` is
     `Returned for Corrections`, otherwise `null`. `hasPublishedVersion` marks a
     revision of an already-public article. `hasUnsubmittedChanges` is `true` only
     for a `Published` article whose working copy differs from its approved
-    version — edits not yet sent for review (use it to prompt "Submit changes").
+    version - edits not yet sent for review (use it to prompt "Submit changes").
 
-- **`GET /api/articles/mine?state=&cursor=&limit=`** — `requireAuth`; the caller's own articles.
+- **`GET /api/articles/mine?state=&cursor=&limit=`** - `requireAuth`; the caller's own articles.
   - Every state, or one `state` (unknown → `400`). Ordered by `updatedAt` desc.
   - `200 → { data: { items: [WorkItem], nextCursor } }`; `401` without a session.
 
-- **`GET /api/articles/:id`** — one article.
+- **`GET /api/articles/:id`** - one article.
   - **Its author, or any editor** → the full document:
     `{ id, slug, state, title, abstract, body, image, category, author, editorNote,
     submittedAt, published, hasUnsubmittedChanges, firstPublishedAt,
     history: [{ at, kind, by }], viewCount, createdAt, updatedAt }`. Top-level content fields are the working
-    copy; `published` is the approved snapshot (or `null`) — enough for a diff.
+    copy; `published` is the approved snapshot (or `null`) - enough for a diff.
   - **Anyone else** → the published version only: `Card` plus `body`. `404` if
     the article was never published (a draft's existence is not revealed).
   - `400 invalid_id` for a malformed id; `404` for an unknown one.
   - Does **not** count a view (D10). The article page render does.
 
-#### Writing articles (P2-03) — all `requireAuth` (reporter or editor)
+#### Writing articles (P2-03) - all `requireAuth` (reporter or editor)
 
 Request bodies may contain **only** `title`, `abstract`, `body`, `image`,
-`category` — all strings. Anything else (`author`, `state`, `published`, …) →
+`category` - all strings. Anything else (`author`, `state`, `published`, …) →
 `400 bad_request`; the author is always the session user. Text is stored as
-typed (plain text — P3 renders it escaped). Limits: title 200, abstract 500,
+typed (plain text - P3 renders it escaped). Limits: title 200, abstract 500,
 body 50,000, image 2,000 characters. `category` must be in `CATEGORIES`.
 `image` must be empty or an `http(s)://` URL.
 
 Who may change an article's working copy: **editors** always; **reporters**
 only their own (`403` otherwise) and not while it is `Pending Editor Approval`
-(`409 conflict`). Editing a Published article changes only the working copy —
+(`409 conflict`). Editing a Published article changes only the working copy -
 `published` and the public view stay as approved until an editor approves.
 
-- **`POST /api/articles`** — body needs a non-blank `title` and a `category`.
+- **`POST /api/articles`** - body needs a non-blank `title` and a `category`.
   - `201 → { data: <full article> }` (same shape as `GET /api/articles/:id` for
     its author), `state: "In Preparation"`, `slug: null`, `published: null`.
-- **`PATCH /api/articles/:id`** — full edit: at least one field; `title`, if
+- **`PATCH /api/articles/:id`** - full edit: at least one field; `title`, if
   sent, must be non-blank. State never changes.
   - `200 → { data: <full article> }`.
-- **`PATCH /api/articles/:id/autosave`** — the debounced save behind
+- **`PATCH /api/articles/:id/autosave`** - the debounced save behind
   "work is never lost". Any subset of the fields, **blank values allowed**
   (a half-written draft), but never invalid ones (unknown field, bad category,
   unsafe image, over-long text → `400`). State never changes.
-  - `200 → { data: { id, savedAt } }` — `savedAt` is the stored `updatedAt`.
+  - `200 → { data: { id, savedAt } }` - `savedAt` is the stored `updatedAt`.
   - The draft is on the server: reopening the article from any device
     (`GET /api/articles/:id`) returns it.
-- **`POST /api/articles/:id/submit`** — → `Pending Editor Approval` (owner or
+- **`POST /api/articles/:id/submit`** - → `Pending Editor Approval` (owner or
   editor), via the state machine. Clears `editorNote`, sets `submittedAt`.
   - `200 → { data: <full article> }`.
   - `400` if `title`, `body` or `category` is blank; `403` for another
@@ -280,39 +281,39 @@ only their own (`403` otherwise) and not while it is `Pending Editor Approval`
     Pending) or a Published article has no changes.
 
 Transitions (submit, approve, return) are conditional on the state and revision
-the request read: if the article changed in between — a concurrent approve, a
-return, or an autosave — the loser gets `409 conflict` and nothing is written.
+the request read: if the article changed in between - a concurrent approve, a
+return, or an autosave - the loser gets `409 conflict` and nothing is written.
 Of N concurrent approves exactly one is `200` and adds one `history` marker.
 
 All four: `401` without a session; `400 invalid_id` for a malformed id; `404`
 for an unknown one.
 
-#### Editor decisions (P2-04) — all `requireRole('editor')`
+#### Editor decisions (P2-04) - all `requireRole('editor')`
 
 `401` without a session, `403` for a reporter (even on their own article),
 `400 invalid_id` for a malformed id, `404` for an unknown one. Which state
 changes are legal is decided by the state machine; an illegal one is `409`.
 
-- **`POST /api/articles/:id/approve`** — `Pending Editor Approval` → `Published`.
+- **`POST /api/articles/:id/approve`** - `Pending Editor Approval` → `Published`.
   Copies the working copy into `published`, bumps `published.version`, sets
   `slug` and `firstPublishedAt` on the first approval only. The slug is the
   lowercased title with letters/digits of any script kept (a Hebrew title gives
   `חדשות-מהעולם`, percent-encoded in URLs) and other runs turned into `-`; a title
   with no letters or digits falls back to `article-<id>` (a taken slug gets
-  `-2`, `-3`, …), clears `submittedAt`, and appends a `history` marker —
-  `publish` the first time, `update` after — for Impact Analytics.
+  `-2`, `-3`, …), clears `submittedAt`, and appends a `history` marker -
+  `publish` the first time, `update` after - for Impact Analytics.
   - `200 → { data: <full article> }`. The public view switches to the new version at once.
-- **`POST /api/articles/:id/return`** — body `{ note }` only.
+- **`POST /api/articles/:id/return`** - body `{ note }` only.
   `Pending Editor Approval` → `Returned for Corrections`. `note` is required,
   trimmed, non-blank, at most 1,000 characters (else `400`). It is shown to the
   reporter as `editorNote` until they resubmit. A returned revision of a
   Published article keeps its approved version public.
   - `200 → { data: <full article> }`.
-- **`DELETE /api/articles/:id`** — deletes the article, then its comments and
+- **`DELETE /api/articles/:id`** - deletes the article, then its comments and
   view records (`ViewEvent`s). Any state.
   - `200 → { data: { ok: true } }`; `404` if already deleted.
 
-#### Server-render hook (not an HTTP endpoint) — `getArticleForRender(slugOrId)`
+#### Server-render hook (not an HTTP endpoint) - `getArticleForRender(slugOrId)`
 
 > **Status: not wired.** `getArticleForRender` and `recordArticleView` exist as
 > tested services, but **no route or page calls them yet**: the public pages
@@ -343,35 +344,40 @@ res.render('article', { article }); // article.body is the full text → SEO
   malformed, or never-published article. Never throws for bad input.
 - Does **not** count a view: the page controller calls `recordArticleView` (below).
 
-#### Counting a view (not an HTTP endpoint) — `recordArticleView(articleId, { viewer })`
+#### Counting a view (not an HTTP endpoint) - `recordArticleView(articleId, { viewer, deviceId })`
 
 P2-08. Call it **once per render of the article page**, and nowhere else (D10):
 not from the JSON API, not from the Ajax comment load.
 
-- Records one `ViewEvent` (P1's `recordView` — the Impact Analytics series) and
+- Records one `ViewEvent` (P1's `recordView` - the Impact Analytics series) and
   adds 1 to the article's `viewCount` (the `sort=popularity` key). The increment
   is atomic and does **not** change `updatedAt`.
 - Pass `viewer: req.user`. A logged-in reporter or editor is **not** counted, so
-  the numbers reflect readers. Every reader entry counts, refreshes included.
+  the numbers reflect readers.
+- Pass `deviceId: req.cookies.deviceId`. One device is counted at most once per
+  article per 30 minutes (`VIEW_DEDUP_WINDOW_MS`), so refreshing does not
+  inflate the count while a later return visit does count. The claim is one
+  atomic upsert on the `viewseens` collection (TTL-indexed, self-cleaning), so
+  simultaneous requests from one device count once.
 - Only public articles (with a published version) are counted.
-- Never throws — a failure is logged and the page still renders. Resolves to
+- Never throws - a failure is logged and the page still renders. Resolves to
   `true` when the view was counted, `false` otherwise.
 
-### Comments — _P3_
+### Comments - _P3_
 
-- `GET /api/articles/:articleId/comments?cursor&limit&q` — list one article's comments, newest first. Not rate-limited.
-  - `cursor` — opaque string, optional (the previous page's `nextCursor`). Malformed → `400 bad_request`.
-  - `limit` — `1` to `100`, default `20`.
-  - `q` — case-insensitive substring match on `body`, optional. Matched literally: regex characters such as `(` or `.*` are plain text.
+- `GET /api/articles/:articleId/comments?cursor&limit&q` - list one article's comments, newest first. Not rate-limited.
+  - `cursor` - opaque string, optional (the previous page's `nextCursor`). Malformed → `400 bad_request`.
+  - `limit` - `1` to `100`, default `20`.
+  - `q` - case-insensitive substring match on `body`, optional. Matched literally: regex characters such as `(` or `.*` are plain text.
   - `200 → { data: { items: [Comment], nextCursor: "<opaque or null>" } }`.
-    - `items` — comments ordered newest first (ties broken by id, so paging never skips or repeats).
-    - `nextCursor` — opaque string when more remain, `null` on the last page.
+    - `items` - comments ordered newest first (ties broken by id, so paging never skips or repeats).
+    - `nextCursor` - opaque string when more remain, `null` on the last page.
   - `400 { error: { code: "invalid_id" } }` if `:articleId` is not a well-formed 
     ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
   - `404` if `:articleId` is well-formed but no such article exists or it has never been published.
     An article with a pending or returned revision still has a published version, so it stays open.
 
-- `POST /api/articles/:articleId/comments` — create one comment. Guarded by `rateLimit`.
+- `POST /api/articles/:articleId/comments` - create one comment. Guarded by `rateLimit`.
   - Request body: `{ "authorName": "...", "body": "..." }`.
   - `201 → { data: { id, article, authorName, body, createdAt } }`. Note: `deviceId` is never serialized.
   - `400 { error: { code: "validation" } }` on a missing/blank field or over max length 
@@ -392,8 +398,8 @@ not from the JSON API, not from the Ajax comment load.
   - The limiter store is in-memory, capped at 10,000 keys (least-recently-used
     evicted) and swept for expired entries every 60s.
 
-- `PATCH /api/comments/:id` — editor-only (`requireRole('editor')`); moderation edit.
-  - Body `{ body }` — the only editable field (`authorName`, `article`, `deviceId`
+- `PATCH /api/comments/:id` - editor-only (`requireRole('editor')`); moderation edit.
+  - Body `{ body }` - the only editable field (`authorName`, `article`, `deviceId`
     and anything else are ignored). Trimmed, 1..2000 chars like create.
   - `200 → { data: Comment }` (no `deviceId`); `401` no session; `403` reporter.
   - `400 validation` for a blank/over-long `body`; `400 bad_request` when `body`
@@ -401,40 +407,57 @@ not from the JSON API, not from the Ajax comment load.
     `404` if no such comment.
   - Comments have no edited marker or history; `createdAt` is unchanged.
 
-- `DELETE /api/comments/:id` — editor-only (`requireRole('editor')`).
+- `DELETE /api/comments/:id` - editor-only (`requireRole('editor')`).
   - `200 → { data: { ok: true } }`.
   - `401` with no session; `403` for a `reporter`.
   - `400 { error: { code: "invalid_id" } }` if `:id` is not a well-formed 
     ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
   - `404` if `:id` is well-formed but no such comment exists or is already deleted.
 
-### Article stats  — _P1_
+### Article stats  - _P1_
 
-- `GET /api/articles/:id/stats?from&to&bucket` — editor-only (`requireRole('editor')`).
-  - `bucket` — `'hour' | 'day'`, default `'hour'`. Any other non-empty value →
+- `GET /api/articles/:id/stats?from&to&bucket` - editor-only (`requireRole('editor')`).
+  - `bucket` - `'hour' | 'day'`, default `'hour'`. Any other non-empty value →
     `400 { error: { message: "invalid bucket", code: "bad_request" } }`.
-  - `from` / `to` — ISO 8601 date strings, optional. `to` defaults to now;
+  - `from` / `to` - ISO 8601 date strings, optional. `to` defaults to now;
     `from` defaults to 24h before the effective `to`. Given but unparsable
     (`new Date(x)` is `Invalid Date`) → `400 { error: { message: "invalid from/to", code: "bad_request" } }`.
   - `200 → { data: { series: [{ t, count }], markers: [{ t, kind }] } }`.
-    - `series` — one point per `bucket`-sized boundary spanning
+    - `series` - one point per `bucket`-sized boundary spanning
       `[from, to]` inclusive, ascending, no gaps; a bucket with zero
       `ViewEvent`s still appears with `count: 0`. Bucketing uses Mongo's
       `$dateTrunc` on `ViewEvent.at`; empty buckets are filled in code
       after the aggregation. Buckets are **UTC-aligned** (a `day` bucket starts
       at 00:00 UTC, i.e. 02:00/03:00 Israel time); there is no `tz` param, so
       clients wanting local days must re-bucket `hour` results themselves.
-    - Range cap — a request spanning more than 2000 buckets (~83 days of
+    - Range cap - a request spanning more than 2000 buckets (~83 days of
       `hour`, ~5.5 years of `day`) → `400 { error: { message: "range too large: at most 2000 <bucket> buckets", code: "bad_request" } }`.
-    - `markers` — every entry in the article's `history` (not filtered by
+    - `markers` - every entry in the article's `history` (not filtered by
       `from`/`to`), mapped to `{ t: entry.at.toISOString(), kind: entry.kind }`
       and sorted ascending by `at`.
   - `401` with no session; `403` for a `reporter`.
   - `400 { error: { code: "invalid_id" } }` if `:id` is not a well-formed
     ObjectId (mapped automatically by `errorHandler`'s `CastError` case).
   - `404` if `:id` is well-formed but no such article exists.
-  - **ViewEvent retention** — raw `ViewEvent` documents (one per view) are kept
+  - **ViewEvent retention** - raw `ViewEvent` documents (one per view) are kept
     indefinitely: no TTL index and no pre-aggregation, because Impact Analytics
     needs full history. Growth is bounded by traffic and served by the
-    `{ article, at }` index. If volume becomes a problem, add rollup
+    `{ article, at, _id }` index. If volume becomes a problem, add rollup
     collections (hourly counts) rather than expiring events.
+
+### View records (ViewEvent CRUD)
+
+All editor-only (`requireRole('editor')`): `401` with no session, `403` for a
+reporter. A record is `{ id, article, at }` (`at` ISO 8601). **Create** is not
+an endpoint: the article page render records a view (`recordArticleView`).
+
+- `GET /api/articles/:id/views?from&to&cursor&limit` - the article's view
+  records, newest first. `from`/`to` optional ISO dates (unparsable → `400`);
+  `limit` 1–100, default 20; `cursor` is the previous page's `nextCursor`
+  (malformed → `400`). `200 → { data: { items: [view], nextCursor } }`.
+  `404` for an unknown article.
+- `GET /api/views/:id` - `200 → { data: view }`; `404` unknown; `400 invalid_id` malformed.
+- `PATCH /api/views/:id` - body `{ at }` (the only accepted field), a valid date
+  not in the future; anything else → `400`. `200 → { data: view }`.
+- `DELETE /api/views/:id` - removes the record and decrements the article's
+  `viewCount` (never below 0). `200 → { data: { ok: true } }`; `404` unknown.

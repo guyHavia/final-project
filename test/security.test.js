@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
 import express from 'express';
 import request from 'supertest';
 
@@ -106,13 +107,12 @@ describe('requireSameOrigin', () => {
 describe('production SESSION_SECRET guard', () => {
   const prod = (s) => () => buildEnv({ NODE_ENV: 'production', SESSION_SECRET: s });
   test('rejects short secrets', () => assert.throws(prod('short-secret'), /SESSION_SECRET/));
-  test('rejects the committed .env.test value', () =>
-    assert.throws(
-      prod('0db5075dde9211db4b742e8f6972a854e812ad219c9fb59576be6c6a2b001c9a'),
-      /SESSION_SECRET/
-    ));
-  test('accepts a long random secret', () =>
-    assert.doesNotThrow(prod('x'.repeat(16) + 'Zq9'.repeat(6))));
+  test('the test suite itself runs with a 512-bit secret', () =>
+    assert.match(process.env.SESSION_SECRET, /^[0-9a-f]{128}$/));
+  test('rejects a secret below 512 bits (127 hex characters)', () =>
+    assert.throws(prod(randomBytes(64).toString('hex').slice(1)), /SESSION_SECRET/));
+  test('accepts a 512-bit secret (128 hex characters, openssl rand -hex 64)', () =>
+    assert.doesNotThrow(prod(randomBytes(64).toString('hex'))));
   test('trustProxy from env', () => {
     assert.equal(buildEnv({ TRUST_PROXY: '1' }).trustProxy, 1);
     assert.equal(buildEnv({}).trustProxy, false);

@@ -4,11 +4,11 @@ Working notes for any agent or human contributing to **The Daily Web**.
 
 ## Orient
 
-1. `CONTEXT.md` — domain glossary. Read first.
-2. `docs/TEAM-PLAN.md` — how the 5-person team splits the work; locked decisions D1–D8.
-3. `docs/roles/P{N}-*.md` — your assignment. You own **one** role. Read only yours.
-4. `docs/tickets/P{N}.md` — your tickets in order. `docs/tickets/README.md` — full backlog + dependency graph.
-5. `docs/API-CONTRACT.md` — the REST contract. Update it in the same PR that adds an endpoint.
+1. `CONTEXT.md` - domain glossary. Read first.
+2. `docs/TEAM-PLAN.md` - how the 5-person team splits the work; locked decisions D1–D8.
+3. `docs/roles/P{N}-*.md` - your assignment. You own **one** role. Read only yours.
+4. `docs/tickets/P{N}.md` - your tickets in order. `docs/tickets/README.md` - full backlog + dependency graph.
+5. `docs/API-CONTRACT.md` - the REST contract. Update it in the same PR that adds an endpoint.
 
 ## Conventions
 
@@ -35,8 +35,8 @@ GitHub Issues on `guyHavia/final-project`, via the `gh` CLI. See `docs/agents/is
 
 ### Triage labels
 
-Default vocabulary — `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+Default vocabulary - `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
-Single-context — root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
+Single-context - root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.

@@ -9,6 +9,13 @@ export function validateRange(fromValue, toValue) {
   return null;
 }
 
+/** A bucket's start time (ms) as readable text: "Oct 9, 2026, 2:00 PM" for hours, "Oct 9, 2026" for days. */
+export function formatBucketTime(ms, bucket, locale) {
+  const options = { year: 'numeric', month: 'short', day: 'numeric' };
+  if (bucket !== 'day') Object.assign(options, { hour: '2-digit', minute: '2-digit' });
+  return new Date(ms).toLocaleString(locale, options);
+}
+
 export function markerKindLabel(kind) {
   return kind === 'publish' ? 'Published' : 'Updated';
 }

@@ -17,7 +17,7 @@ function showUnavailable() {
   widget.replaceChildren(el('p', 'weather-unavailable', 'Weather is unavailable right now.'));
 }
 
-function show({ tempC, description, icon, observedAt }) {
+function show({ city, tempC, description, icon, observedAt }) {
   const now = el('div', 'weather-now');
   if (icon) {
     const img = el('img', 'weather-icon');
@@ -30,7 +30,7 @@ function show({ tempC, description, icon, observedAt }) {
   now.append(el('span', 'weather-temp', `${Math.round(tempC)}°C`));
 
   const details = el('div', 'weather-details');
-  details.append(el('span', 'weather-city', 'Tel Aviv'));
+  if (city) details.append(el('span', 'weather-city', city));
   if (description) details.append(el('span', 'weather-desc', description));
   if (observedAt) {
     const time = new Date(observedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });

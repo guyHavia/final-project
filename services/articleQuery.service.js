@@ -98,7 +98,7 @@ export function buildPublicFeedQuery({ q, category, sort = 'date', order, cursor
 
 /**
  * Editor newsroom query: `state` is one of the four states or `'all'`. Search and
- * category read the working copy — what the newsroom is working on. Always
+ * category read the working copy - what the newsroom is working on. Always
  * ordered by most recently updated.
  */
 export function buildNewsroomQuery({ state, q, category, cursor } = {}) {
@@ -127,7 +127,7 @@ export function buildMineQuery(authorId, { state, cursor } = {}) {
 
 /**
  * `hasUnsubmittedChanges`, computed by MongoDB: a Published article whose working
- * copy differs from its approved version — edits the reporter has not sent for
+ * copy differs from its approved version - edits the reporter has not sent for
  * review yet. Computed in the query so list pages never load the full bodies.
  * Mirrors workingCopyDiffersFromPublished() in the state machine.
  */
@@ -141,7 +141,7 @@ const HAS_UNSUBMITTED_CHANGES = {
 /** Every content field except the body: lists show the rest, never the full text. */
 const LIST_CONTENT_FIELDS = CONTENT_FIELDS.filter((field) => field !== 'body');
 
-/** What a public feed page loads: the published card fields only — no working copy, no workflow fields. */
+/** What a public feed page loads: the published card fields only - no working copy, no workflow fields. */
 const PUBLIC_PROJECTION = {
   slug: 1,
   author: 1,
@@ -258,11 +258,11 @@ export async function listMine(authorId, { limit, ...params }) {
 
 /**
  * One article for `viewer` (`req.user`, or undefined for a guest).
- * - Its author or any editor: the full document — working copy, published
- *   version, state, editor note, history — so the newsroom can show a diff.
+ * - Its author or any editor: the full document - working copy, published
+ *   version, state, editor note, history - so the newsroom can show a diff.
  * - Everyone else: the published version only; 404 if it was never published,
  *   so a draft's existence is not revealed.
- * Does not count a view (D10 — the article page render does that).
+ * Does not count a view (D10 - the article page render does that).
  */
 export async function getArticleForViewer(id, viewer) {
   const doc = await Article.findById(id).lean();
@@ -278,13 +278,13 @@ export async function getArticleForViewer(id, viewer) {
 }
 
 /**
- * P2-07 — the server-render hook for P3's `GET /article/:slug` page. Returns one
+ * P2-07 - the server-render hook for P3's `GET /article/:slug` page. Returns one
  * public article with its FULL body (the SEO requirement: the text is in the
  * first HTML response), or `null` so the page can render its own 404.
  *
  * - Looks up by slug (case-insensitive: slugs are stored lowercase), then falls
  *   back to the article id when no slug matches (D5).
- * - Only ever reads the published version — never the working copy — so a
+ * - Only ever reads the published version - never the working copy - so a
  *   pending or returned revision can't leak into the page.
  * - Never throws for bad input and does not count a view (P2-08 / D10).
  *
