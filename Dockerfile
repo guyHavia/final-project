@@ -12,18 +12,23 @@ RUN npm ci --omit=dev
 FROM node:26-alpine AS runtime
 WORKDIR /app
 
-# Non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
-
-# Copy installed modules from build stage
+# Copy only what the app runs; nothing else from the repo can end up in the image.
+# Files stay owned by root, so the app user can read but not modify its own code.
 COPY --from=deps /app/node_modules ./node_modules
+COPY package.json app.js server.js ./
+COPY config ./config
+COPY controllers ./controllers
+COPY lib ./lib
+COPY middleware ./middleware
+COPY models ./models
+COPY public ./public
+COPY routes ./routes
+COPY seed ./seed
+COPY services ./services
+COPY views ./views
 
-# Copy application source (everything except what .dockerignore excludes)
-COPY . .
-
-# Owned by the non-root user
-RUN chown -R appuser:appgroup /app
-USER appuser
+# The image's built-in non-root user
+USER node
 
 EXPOSE 3000
 
